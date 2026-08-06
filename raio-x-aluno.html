@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Portal Rodin — Raio-X do Aluno</title>
+    
+    <!-- Phosphor Icons (Self-Hosted) -->
+    <script src="/assets/js/phosphor.js"></script>
+    
+    <!-- Supabase JS Client & Global Module -->
+    <script src="/assets/js/supabase.js"></script>
+    <script src="global.js"></script>
+    <link rel="stylesheet" href="global.css">
+
+    <!-- html2pdf.js (Self-Hosted) -->
+    <script src="/assets/js/html2pdf.bundle.min.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-layout" id="app-layout">
+        <aside class="sidebar-secondary" id="sidebar-secondary"></aside>
+
+        <main class="main-content">
+            <header class="main-header" id="main-header">
+                <div class="header-breadcrumbs">
+                    <span>Portal Rodin</span> <i class="ph ph-caret-right"></i> <strong id="current-page-title">Raio-X do Aluno</strong>
+                </div>
+            </header>
+
+            <div class="view-scroll-container" id="view-scroll-container">
+                <div id="view-gestao" class="view-container active">
+                    
+                    <!-- 2. RAIO-X DO ALUNO -->
+                    <div id="view-aluno" class="sub-view active">
+                        <div class="rx-student-card">
+                            <div class="rx-student-info">
+                                <img id="rx-avatar-img" src="" alt="Aluno">
+                                <div>
+                                    <h2 id="rx-nome-aluno" style="font-size: 20px;">Carregando...</h2>
+                                    <span id="rx-condicao-aluno" style="font-size:12px; color:var(--rodin-orange); font-weight:700;">Condição: regular</span>
+                                </div>
+                            </div>
+                            <div class="filter-pill-bar">
+                                <div class="filter-pill-item">
+                                    <label>PERÍODO</label>
+                                    <select id="rx-periodo-select" onchange="alternarFiltroPeriodo('rx')">
+                                        <option value="tudo">Todo o Período</option>
+                                        <option value="hoje">Hoje</option>
+                                        <option value="7d">Últimos 7 dias</option>
+                                        <option value="30d">Últimos 30 dias</option>
+                                        <option value="personalizado">Personalizado</option>
+                                    </select>
+                                </div>
+                                <div class="filter-pill-item" id="rx-custom-dates" style="display:none;">
+                                    <label>DE / ATÉ</label>
+                                    <div style="display:flex; gap:6px; align-items:center;">
+                                        <input type="date" id="rx-date-start" onchange="renderizarRaioX()" style="padding:6px; border-radius:8px; border:1px solid var(--rodin-line); font-size:11px;">
+                                        <span style="font-size:10px; color:var(--rodin-cool-gray);">até</span>
+                                        <input type="date" id="rx-date-end" onchange="renderizarRaioX()" style="padding:6px; border-radius:8px; border:1px solid var(--rodin-line); font-size:11px;">
+                                    </div>
+                                </div>
+                                <div class="filter-pill-item"><label>TURMA</label><select id="rx-turma-select" onchange="carregarAlunosRaioX()" oninput="carregarAlunosRaioX()"></select></div>
+                                <div class="filter-pill-item"><label>ALUNO</label><select id="rx-aluno-select" onchange="renderizarRaioX()" oninput="renderizarRaioX()"></select></div>
+                            </div>
+                        </div>
+
+                        <!-- Comparativo vs Média da Turma -->
+                        <div class="rx-bars-container">
+                            <h4 style="font-size: 11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--rodin-cool-gray); margin-bottom:16px;">
+                                COMPARATIVO: ALUNO VS MÉDIA DA TURMA
+                            </h4>
+                            <div class="rx-bar-row">
+                                <div class="rx-bar-item">
+                                    <div style="display:flex; justify-content:space-between; font-weight:700; font-size:12px;"><span>Total Ocorrências</span><span>0</span></div>
+                                    <div class="rx-bar-track"><div class="rx-bar-fill" style="width:0%;"></div></div>
+                                </div>
+                                <div class="rx-bar-item">
+                                    <div style="display:flex; justify-content:space-between; font-weight:700; font-size:12px;"><span>Sonolência / Dormindo</span><span>0</span></div>
+                                    <div class="rx-bar-track"><div class="rx-bar-fill blue" style="width:0%;"></div></div>
+                                </div>
+                                <div class="rx-bar-item">
+                                    <div style="display:flex; justify-content:space-between; font-weight:700; font-size:12px;"><span>Desvios de Conduta</span><span>0</span></div>
+                                    <div class="rx-bar-track"><div class="rx-bar-fill" style="width:0%;"></div></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Timeline Pedagógica Unificada com Ações do Orientador -->
+                        <div class="timeline-pedagogica-box">
+                            <h3 style="font-size: 16px; font-weight: 800; color: var(--rodin-graphite); margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+                                <span style="display: flex; align-items: center; gap: 8px;">
+                                    <i class="ph-bold ph-clock-counter-clockwise" style="color: var(--rodin-orange); font-size:20px;"></i> Timeline Pedagógica Integrada
+                                </span>
+                                <span style="font-size: 11px; font-weight: 700; color: var(--rodin-cool-gray); background:#F1F5F9; padding:4px 10px; border-radius:8px;">Histórico Completo: Ocorrências + Ações do Orientador</span>
+                            </h3>
+                            <div id="rx-timeline-list"></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+
+
+    <!-- SCRIPTS -->
+    <script src="global.js"></script>
+    <script src="sidebar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
+    <script src="face_security.js"></script>
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            renderizarSidebarModelo('raio-x-aluno');
+            if (typeof inicializarApp === 'function') {
+                await inicializarApp();
+            }
+            if (typeof carregarAlunosRaioX === 'function') {
+                await carregarAlunosRaioX();
+            }
+        });
+    </script>
+</body>
+</html>

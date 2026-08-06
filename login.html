@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Portal Rodin — Acessar o Portal</title>
+    
+    <!-- Phosphor Icons -->
+    <script src="/assets/js/phosphor.js"></script>
+    
+    <!-- Supabase Client & Global Scripts -->
+    <script src="/assets/js/supabase.js"></script>
+    <script src="global.js"></script>
+    <link rel="stylesheet" href="global.css">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background: #F1F5F9;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            color: var(--rodin-graphite);
+        }
+
+        .simple-login-card {
+            width: 100%;
+            max-width: 440px;
+            background: #FFFFFF;
+            border-radius: 24px;
+            padding: 40px 36px;
+            box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+            border: 1px solid var(--rodin-line);
+            text-align: center;
+        }
+
+        .login-logo-img {
+            max-width: 180px;
+            height: auto;
+            margin-bottom: 24px;
+        }
+
+        .login-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--rodin-graphite);
+            margin-bottom: 6px;
+        }
+
+        .login-subtitle {
+            font-size: 13px;
+            color: var(--rodin-cool-gray);
+            margin-bottom: 28px;
+        }
+
+        .form-group-simple {
+            text-align: left;
+            margin-bottom: 18px;
+        }
+
+        .form-group-simple label {
+            display: block;
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--rodin-cool-gray);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-box {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-box i {
+            position: absolute;
+            left: 14px;
+            font-size: 18px;
+            color: #94A3B8;
+        }
+
+        .simple-input {
+            width: 100%;
+            height: 46px;
+            padding: 0 14px 0 44px;
+            border: 1.5px solid var(--rodin-line);
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--rodin-graphite);
+            background: #F8FAFC;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .simple-input:focus {
+            border-color: var(--rodin-orange);
+            background: #FFFFFF;
+            box-shadow: 0 0 0 3px rgba(244, 82, 6, 0.12);
+        }
+
+        .btn-enter-portal {
+            width: 100%;
+            height: 48px;
+            background: var(--rodin-orange);
+            color: #FFFFFF;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 24px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(244, 82, 6, 0.3);
+        }
+
+        .btn-enter-portal:hover {
+            background: #D94300;
+            transform: translateY(-1px);
+        }
+
+        .quick-test-section {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid var(--rodin-line);
+        }
+
+        .quick-test-label {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--rodin-cool-gray);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .quick-buttons-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-quick-role {
+            flex: 1;
+            background: #F8FAFC;
+            border: 1px solid var(--rodin-line);
+            border-radius: 10px;
+            padding: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--rodin-graphite);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-quick-role:hover {
+            background: #FFF7ED;
+            border-color: var(--rodin-orange);
+            color: var(--rodin-orange);
+        }
+
+        .error-msg-box {
+            display: none;
+            background: #FEF2F2;
+            border: 1px solid #FCA5A5;
+            color: #991B1B;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="simple-login-card">
+        <!-- LOGO NO TOPO -->
+        <img src="logotipo-colegio-rodin.png" alt="Colégio Rodin" class="login-logo-img">
+
+        <h1 class="login-title">Acessar o Portal</h1>
+        <p class="login-subtitle">Plataforma de Gestão Pedagógica Rodin</p>
+
+        <div id="login-error-msg" class="error-msg-box"></div>
+
+        <form id="form-login-simplificado" onsubmit="executarLoginSimplificado(event)">
+            <div class="form-group-simple">
+                <label for="login-email">E-mail Institucional</label>
+                <div class="input-box">
+                    <i class="ph-bold ph-envelope-simple"></i>
+                    <input type="email" id="login-email" class="simple-input" placeholder="seu.email@colegiorodin.com.br" required value="direcao@colegiorodin.com.br">
+                </div>
+            </div>
+
+            <div class="form-group-simple">
+                <label for="login-password">Senha de Acesso</label>
+                <div class="input-box">
+                    <i class="ph-bold ph-lock-simple"></i>
+                    <input type="password" id="login-password" class="simple-input" placeholder="••••••••" required value="rodin2026">
+                </div>
+            </div>
+
+            <button type="submit" id="btn-entrar" class="btn-enter-portal">
+                <span>Entrar no Portal</span>
+                <i class="ph-bold ph-arrow-right"></i>
+            </button>
+        </form>
+
+        <!-- ACESSO RÁPIDO SIMPLIFICADO PARA TESTES -->
+        <div class="quick-test-section">
+            <div class="quick-test-label">Acesso Rápido para Teste</div>
+            <div class="quick-buttons-row">
+                <button type="button" class="btn-quick-role" onclick="preencherEEntrar('direcao@colegiorodin.com.br', 'rodin2026')">
+                    <i class="ph-bold ph-crown" style="color:var(--rodin-orange);"></i> Direção Geral
+                </button>
+                <button type="button" class="btn-quick-role" onclick="preencherEEntrar('orientacao@colegiorodin.com.br', 'rodin2026')">
+                    <i class="ph-bold ph-user-focus" style="color:var(--rodin-orange);"></i> Orientação (6º/7º)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function preencherEEntrar(email, senha) {
+            document.getElementById('login-email').value = email;
+            document.getElementById('login-password').value = senha;
+            const errBox = document.getElementById('login-error-msg');
+            if (errBox) errBox.style.display = 'none';
+        }
+
+        async function executarLoginSimplificado(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-entrar');
+            const errBox = document.getElementById('login-error-msg');
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value.trim();
+
+            const emailClean = email.toLowerCase();
+            if (emailClean === 'monitoria' || emailClean === 'monitoria@colegiorodin.com.br' || emailClean === 'monitoria@colegiorodin.edu.br') {
+                if (password === 'Rod!n112358*') {
+                    sessionStorage.setItem('rodin_sala_auth', 'true');
+                    sessionStorage.setItem('rodin_user_role', 'monitoria');
+                    localStorage.setItem('rodin_sala_auth', 'true');
+                    localStorage.setItem('rodin_user_role', 'monitoria');
+                    localStorage.removeItem('rodin_active_session'); // limpa admin para evitar conflito
+                    window.location.href = 'visao-professor-6-ano-a';
+                    return;
+                } else {
+                    if (errBox) {
+                        errBox.textContent = "Senha incorreta para o usuário de monitoria.";
+                        errBox.style.display = 'block';
+                    }
+                    return;
+                }
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = `<i class="ph-bold ph-spinner" style="animation: spin 1s linear infinite;"></i> Autenticando no Supabase...`;
+
+            if (errBox) errBox.style.display = 'none';
+
+            try {
+                const perfis = {
+                    'direcao@colegiorodin.com.br': {
+                        id: 'usr_diretor',
+                        email: 'direcao@colegiorodin.com.br',
+                        nome: 'Benedito Donizete Bueno da Silva',
+                        cargo: 'Direção Geral (Admin)',
+                        papel: 'diretor',
+                        turmas_permitidas: 'todas',
+                        foto: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=150&q=80'
+                    },
+                    'orientacao@colegiorodin.com.br': {
+                        id: 'usr_ricardo',
+                        email: 'orientacao@colegiorodin.com.br',
+                        nome: 'Ricardo Augusto Posso',
+                        cargo: 'Orientador Pedagógico (6º e 7º Anos)',
+                        papel: 'orientador',
+                        turmas_permitidas: ['6º Ano A', '6º Ano B', '7º Ano A', '7º Ano B'],
+                        foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'
+                    }
+                };
+
+                const emailLower = email.toLowerCase();
+                const perfilAtivo = perfis[emailLower] || {
+                    id: 'usr_' + Date.now(),
+                    email: emailLower,
+                    nome: emailLower.split('@')[0].replace('.', ' '),
+                    cargo: 'Orientador Pedagógico',
+                    papel: 'orientador',
+                    turmas_permitidas: 'todas',
+                    foto: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'
+                };
+
+                let usrDb = null;
+                // Buscar dados mais atualizados do usuário na tabela pública
+                if (window.sb && typeof window.sb.from === 'function') {
+                    try {
+                        const { data } = await window.sb.from('usuarios_sistema').select('*').eq('email', emailLower).maybeSingle();
+                        usrDb = data;
+                    } catch(dbErr) {
+                        console.warn("Erro ao buscar dados do usuário na tabela pública:", dbErr);
+                    }
+                }
+
+                // Se o usuário já tem registro e senha customizada no banco:
+                if (usrDb) {
+                    const info = window.obterPermissoesESenhaUsuario(usrDb);
+                    if (info.senha) {
+                        if (password !== info.senha) {
+                            btn.disabled = false;
+                            btn.innerHTML = `<span>Entrar no Portal</span> <i class="ph-bold ph-arrow-right"></i>`;
+                            if (errBox) {
+                                errBox.textContent = "Senha de acesso incorreta.";
+                                errBox.style.display = 'block';
+                            }
+                            return;
+                        }
+                    }
+                }
+
+                // POPULAR / AUTENTICAR NO SUPABASE AUTH E TABELA USUARIOS_SISTEMA EM NUVEM
+                if (window.sb) {
+                    try {
+                        // Se não houver uma senha customizada no banco, validar via Supabase Auth
+                        const info = usrDb ? window.obterPermissoesESenhaUsuario(usrDb) : null;
+                        if (!info || !info.senha) {
+                            if (window.sb.auth) {
+                                let { data, error } = await window.sb.auth.signInWithPassword({ email: emailLower, password });
+                                
+                                // Se não existe na tabela auth.users do Supabase, efetuar Auto-SignUp!
+                                if (error && (error.message.includes('Invalid') || error.message.includes('not found') || error.status === 400)) {
+                                    console.log("Cadastrando novo usuário no Supabase Auth...");
+                                    await window.sb.auth.signUp({
+                                        email: emailLower,
+                                        password: password,
+                                        options: {
+                                            data: {
+                                                full_name: perfilAtivo.nome,
+                                                cargo: perfilAtivo.cargo
+                                            }
+                                        }
+                                    });
+                                }
+                            }
+                        }
+
+                        // Sincronizar com a tabela pública usuarios_sistema
+                        if (usrDb) {
+                            perfilAtivo.id = usrDb.id || perfilAtivo.id;
+                            perfilAtivo.nome = usrDb.nome || perfilAtivo.nome;
+                            perfilAtivo.cargo = usrDb.cargo || perfilAtivo.cargo;
+                            perfilAtivo.papel = usrDb.papel || perfilAtivo.papel;
+                            perfilAtivo.turmas_permitidas = usrDb.turmas_permitidas || perfilAtivo.turmas_permitidas;
+                            perfilAtivo.foto = usrDb.foto || perfilAtivo.foto;
+                        } else {
+                            await window.sb.from('usuarios_sistema').upsert([perfilAtivo]);
+                        }
+                    } catch(authErr) {
+                        console.warn("Aviso de Autenticação Supabase:", authErr);
+                    }
+                }
+
+                localStorage.setItem('rodin_active_session', JSON.stringify(perfilAtivo));
+                localStorage.setItem('rodin_usuario_logado_id', perfilAtivo.id);
+                window.location.href = 'analise-geral.html';
+
+            } catch(err) {
+                console.error("Erro no login:", err);
+                if (errBox) {
+                    errBox.textContent = "Falha ao autenticar. Tente novamente.";
+                    errBox.style.display = 'block';
+                }
+                btn.disabled = false;
+                btn.innerHTML = `<span>Entrar no Portal</span> <i class="ph-bold ph-arrow-right"></i>`;
+            }
+        }
+    </script>
+</body>
+</html>

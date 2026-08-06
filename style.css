@@ -1,0 +1,41 @@
+/* =============================================================
+   Colégio Rodin — Design System & Estilos Completos (style.css)
+   ============================================================= */
+
+@import url('./global.css');
+@import url('./analise-geral.css');
+@import url('./raio-x-aluno.css');
+@import url('./central-acolhimento.css');
+@import url('./setup-turma.css');
+@import url('./cadastros.css');
+@import url('./visao-professor.css');
+@import url('./relatorio-diario.css');
+
+/* Regras de Fallback Globais */
+.app-layout {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #F8FAFC;
+}
+
+.sidebar-secondary {
+  width: 265px;
+  min-width: 265px;
+  background-color: #FFFFFF;
+  border-right: 1px solid #E2E8F0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px 14px;
+  z-index: 100;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}

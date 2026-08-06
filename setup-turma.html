@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Portal Rodin — Setup de Turma</title>
+    
+    <!-- Phosphor Icons (Self-Hosted) -->
+    <script src="/assets/js/phosphor.js"></script>
+    
+    <!-- Supabase JS Client & Global Module -->
+    <script src="/assets/js/supabase.js"></script>
+    <script src="global.js"></script>
+    <link rel="stylesheet" href="global.css">
+
+    <!-- html2pdf.js (Self-Hosted) -->
+    <script src="/assets/js/html2pdf.bundle.min.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-layout" id="app-layout">
+        <aside class="sidebar-secondary" id="sidebar-secondary"></aside>
+
+        <main class="main-content">
+            <header class="main-header" id="main-header">
+                <div class="header-breadcrumbs">
+                    <span>Portal Rodin</span> <i class="ph ph-caret-right"></i> <strong id="current-page-title">Setup de Turma</strong>
+                </div>
+            </header>
+
+            <div class="view-scroll-container" id="view-scroll-container">
+                <div id="view-gestao" class="view-container active">
+                    
+                    <!-- 4. SETUP DE TURMA -->
+                    <div id="view-setup" class="sub-view active">
+                        <!-- Card do Cabeçalho e Seleção de Sub-Abas -->
+                        <div class="rodin-panel-card" style="margin-bottom:20px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+                                <div>
+                                    <h2 style="font-size: 20px; color:var(--rodin-graphite); display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                                        <i class="ph-bold ph-sliders" style="color:var(--rodin-orange);"></i> Setup de Turma e Alocação
+                                    </h2>
+                                    <p style="font-size:12px; color:var(--rodin-cool-gray); margin:0;">Configure a disposição das carteiras da sala e a grade horária semanal da turma com Arraste e Solte (Drag and Drop).</p>
+                                </div>
+                                
+                                <div style="display:flex; align-items:flex-end; gap:12px;">
+                                    <div class="filter-pill-item" style="margin:0;">
+                                        <label style="display:block; font-size:10px; font-weight:800; color:var(--rodin-cool-gray); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.05em;">TURMA EM CONFIGURAÇÃO</label>
+                                        <select id="setup-turma-select" onchange="carregarSetupTurma()" style="height:42px; padding:0 14px; border-radius:12px; font-size:13px; font-weight:700; border:1px solid #CBD5E1; background:#FFF; color:var(--rodin-graphite); outline:none; cursor:pointer;"></select>
+                                    </div>
+                                    <button class="btn-primary-rodin" onclick="salvarSetupTurma()" style="height:42px; padding:0 20px; border-radius:12px; font-size:12px; font-weight:800; display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                        <i class="ph-bold ph-floppy-disk"></i> SALVAR CONFIGURAÇÕES
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Navegação de Sub-Abas Pill -->
+                            <div class="setup-tabs-nav" style="margin-top:20px;">
+                                <button id="btn-setup-tab-mapa" class="setup-tab-btn active" onclick="alternarSubAbaSetup('mapa')">
+                                    <i class="ph-bold ph-grid-four"></i> Montador de Mapa de Sala (Carteiras)
+                                </button>
+                                <button id="btn-setup-tab-grade" class="setup-tab-btn" onclick="alternarSubAbaSetup('grade')">
+                                    <i class="ph-bold ph-calendar-blank"></i> Grade Horária Semanal
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- PAINEL 1: MONTADOR DE MAPA DE SALA (DRAG AND DROP) -->
+                        <div id="setup-subview-mapa" class="setup-subpanel">
+                            <div style="display:grid; grid-template-columns: 300px 1fr; gap:20px;">
+                                <!-- Sidebar: Lista de Alunos Disponíveis -->
+                                <div class="setup-sidebar-card">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                                        <h3 style="font-size: 14px; color:var(--rodin-graphite); font-weight:800;">Alunos da Turma</h3>
+                                        <span id="setup-alocado-count" style="font-size:11px; background:#EEF2FF; color:#4F46E5; font-weight:800; padding:2px 8px; border-radius:999px;">0/30</span>
+                                    </div>
+                                    <input type="text" id="setup-aluno-search" placeholder="Buscar aluno..." onkeyup="filtrarAlunosSetup()" style="width:100%; padding:8px 12px; border-radius:10px; border:1px solid var(--rodin-line); font-size:12px; margin-bottom:12px;">
+
+                                    <div id="setup-palette-alunos" class="setup-alunos-scroll"></div>
+                                </div>
+
+                                <!-- Workspace: Grid de Carteiras Escolares -->
+                                <div class="rodin-panel-card">
+                                    <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:16px; background:#F8FAFC; border:1px solid var(--rodin-line); padding:10px 14px; border-radius:12px;">
+                                        <div style="display:flex; align-items:center; gap:8px;">
+                                            <span style="font-size:12px; font-weight:800; color:var(--rodin-graphite);"><i class="ph-bold ph-rows"></i> Fileiras Horizontais (Linhas):</span>
+                                            <button class="filter-pill-btn" onclick="alterarLinhasCarteira(-1)" style="padding:2px 10px; font-size:14px; font-weight:800;" title="Remover Linha">-</button>
+                                            <span id="setup-rows-count" style="font-size:13px; font-weight:900; color:var(--rodin-orange); min-width:20px; text-align:center;">5</span>
+                                            <button class="filter-pill-btn" onclick="alterarLinhasCarteira(1)" style="padding:2px 10px; font-size:14px; font-weight:800;" title="Adicionar Linha">+</button>
+                                        </div>
+
+                                        <div style="width:1px; height:20px; background:var(--rodin-line);"></div>
+
+                                        <div style="display:flex; align-items:center; gap:8px;">
+                                            <span style="font-size:12px; font-weight:800; color:var(--rodin-graphite);"><i class="ph-bold ph-columns"></i> Fileiras Verticais (Colunas):</span>
+                                            <button class="filter-pill-btn" onclick="alterarColunasCarteira(-1)" style="padding:2px 10px; font-size:14px; font-weight:800;" title="Remover Coluna">-</button>
+                                            <span id="setup-cols-count" style="font-size:13px; font-weight:900; color:var(--rodin-orange); min-width:20px; text-align:center;">6</span>
+                                            <button class="filter-pill-btn" onclick="alterarColunasCarteira(1)" style="padding:2px 10px; font-size:14px; font-weight:800;" title="Adicionar Coluna">+</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="lousa-indicator-banner">
+                                        <i class="ph-bold ph-chalkboard-teacher"></i> LOUSA / PROFESSOR (FRENTE DA SALA)
+                                    </div>
+
+                                    <div id="setup-grid-carteiras" class="setup-desks-grid"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PAINEL 2: GERADOR DE GRADE HORÁRIA -->
+                        <div id="setup-subview-grade" class="setup-subpanel" style="display:none;">
+                            <div style="display:grid; grid-template-columns: 320px 1fr; gap:20px; align-items:start;">
+                                <div class="setup-sidebar-card" style="height:540px; display:flex; flex-direction:column; overflow:hidden;">
+                                    <h3 style="font-size: 14px; color:var(--rodin-graphite); font-weight:800; margin-bottom:4px;">Disciplinas & Professores</h3>
+                                    <span style="font-size:11px; color:var(--rodin-cool-gray); display:block; margin-bottom:12px;">Arraste a disciplina para o dia e horário desejados.</span>
+
+                                    <div id="setup-palette-disciplinas" style="display:flex; flex-direction:column; gap:8px; flex:1; overflow-y:auto; padding-right:6px; max-height:410px;"></div>
+
+                                    <div style="margin-top:auto; padding-top:12px; border-top:1px dashed var(--rodin-line); display:flex; flex-direction:column; gap:8px;">
+                                         <button type="button" onclick="limparGradeSetup()" style="width:100%; height:40px; border-radius:12px; background:#FEF2F2; border:1px solid #FCA5A5; color:#DC2626; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; transition:all 0.2s ease;">
+                                             <i class="ph-bold ph-trash"></i> Limpar Horários
+                                         </button>
+                                    </div>
+                                </div>
+
+                                <div class="rodin-panel-card">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                                        <h3 style="font-size: 15px; color:var(--rodin-graphite); font-weight:800;">Grade Horária Semanal da Turma</h3>
+                                        <span style="font-size:11px; color:var(--rodin-cool-gray);">Segunda a Sexta • 6 Horários por Dia</span>
+                                    </div>
+
+                                    <div class="timetable-scroll-wrapper">
+                                        <table class="timetable-grid-table">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:110px;">HORÁRIO</th>
+                                                    <th>SEGUNDA</th>
+                                                    <th>TERÇA</th>
+                                                    <th>QUARTA</th>
+                                                    <th>QUINTA</th>
+                                                    <th>SEXTA</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="setup-timetable-body"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+
+
+    <!-- SCRIPTS -->
+    <script src="global.js"></script>
+    <script src="sidebar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
+    <script src="face_security.js"></script>
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            renderizarSidebarModelo('setup-turma');
+            carregarSetupTurma();
+        });
+    </script>
+</body>
+</html>

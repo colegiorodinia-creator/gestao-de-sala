@@ -1,0 +1,46 @@
+/* =============================================================
+   Estilos Específicos: Central de Acolhimento (central-acolhimento.css)
+   ============================================================= */
+
+.kanban-cards-column {
+  background: var(--rodin-white);
+  border: 1px solid var(--rodin-line);
+  border-radius: 20px;
+  padding: 16px;
+  min-height: 540px;
+  transition: all 0.2s ease;
+}
+
+.kanban-cards-column.drag-over {
+  border: 2px dashed var(--rodin-orange);
+  background: #FFF7ED;
+}
+
+.kanban-card-item {
+  background: #FFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  cursor: grab;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kanban-card-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+}
+
+.kanban-card-item.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.kanban-card-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--rodin-orange);
+}

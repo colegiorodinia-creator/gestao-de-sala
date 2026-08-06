@@ -1,0 +1,31 @@
+/* =============================================================
+   Estilos Específicos: Relatório Diário & PDF (relatorio-diario.css)
+   ============================================================= */
+
+.report-paper-container {
+  background: #FFF;
+  border: 1px solid var(--rodin-line);
+  border-radius: 20px;
+  padding: 32px;
+  max-width: 800px;
+  margin: 0 auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+}
+
+@media print {
+  body {
+    background: #FFF !important;
+    overflow: visible !important;
+  }
+  
+  .sidebar-secondary, .sidebar-header, .btn-primary-rodin, .cadastros-tabs-nav {
+    display: none !important;
+  }
+
+  .report-paper-container {
+    box-shadow: none !important;
+    border: none !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+}

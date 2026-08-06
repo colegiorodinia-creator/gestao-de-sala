@@ -1,0 +1,164 @@
+/* =============================================================
+   Estilos Específicos: BI & Análise Geral (analise-geral.css)
+   ============================================================= */
+
+.stats-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.stat-kpi-card {
+  background: var(--rodin-white);
+  border: 1px solid var(--rodin-line);
+  border-radius: 20px;
+  padding: 20px 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.stat-kpi-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  margin-bottom: 12px;
+}
+
+.stat-kpi-icon-box.total { background: #FFF7ED; color: var(--rodin-orange); }
+.stat-kpi-icon-box.sonolencia { background: #EEF2FF; color: #4338CA; }
+.stat-kpi-icon-box.desvios { background: #FEF2F2; color: #DC2626; }
+
+.stat-kpi-number-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.stat-kpi-number-row .val {
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--rodin-graphite);
+  line-height: 1;
+}
+
+.stat-kpi-number-row .sub {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--rodin-cool-gray);
+}
+
+.stat-kpi-label {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--rodin-graphite);
+  margin-top: 4px;
+}
+
+.stat-kpi-tag {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-top: 10px;
+  align-self: flex-start;
+}
+
+.stat-kpi-tag.up { background: #F0FDF4; color: #166534; border: 1px solid #BBF7D0; }
+.stat-kpi-tag.down { background: #FEF2F2; color: #991B1B; border: 1px solid #FCA5A5; }
+
+/* PHOTOCARDS DE ALUNOS NO MAPA DE SALA (BI GERAL) */
+#bi-photocards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.student-photocard {
+  position: relative;
+  width: 100%;
+  height: 230px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  background: var(--rodin-graphite);
+}
+
+.student-photocard:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+}
+
+.student-photocard img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: cover !important;
+  display: block;
+}
+
+.photocard-gradient-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.6) 60%, transparent 100%);
+  padding: 16px 12px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.student-name-text {
+  font-size: 13px;
+  font-weight: 800;
+  color: #FFFFFF;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  line-height: 1.2;
+}
+
+.photocard-badges-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.badge-stat-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.badge-stat-item.desvios { background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
+.badge-stat-item.sonolencia { background: #EEF2FF; color: #4338CA; border: 1px solid #C7D2FE; }
+
+.bi-heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.bi-heatmap-desk {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+}

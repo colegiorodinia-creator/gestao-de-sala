@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Portal Rodin — Central de Acolhimento</title>
+    
+    <!-- Phosphor Icons (Self-Hosted) -->
+    <script src="/assets/js/phosphor.js"></script>
+    
+    <!-- Supabase JS Client & Global Module -->
+    <script src="/assets/js/supabase.js"></script>
+
+    <!-- html2pdf.js (Self-Hosted) -->
+    <script src="/assets/js/html2pdf.bundle.min.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-layout" id="app-layout">
+        <aside class="sidebar-secondary" id="sidebar-secondary"></aside>
+
+        <main class="main-content">
+            <header class="main-header" id="main-header">
+                <div class="header-breadcrumbs">
+                    <span>Portal Rodin</span> <i class="ph ph-caret-right"></i> <strong id="current-page-title">Central de Acolhimento</strong>
+                </div>
+            </header>
+
+            <div class="view-scroll-container" id="view-scroll-container">
+                <div id="view-gestao" class="view-container active">
+                    
+                    <!-- 3. CENTRAL DE ACOLHIMENTO -->
+                    <div id="view-kanban" class="sub-view active">
+                        <div class="rodin-panel-card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+                            <div>
+                                <h2 style="font-size: 20px; display:flex; align-items:center; gap:8px;">
+                                    <i class="ph-bold ph-hand-heart" style="color:var(--rodin-orange);"></i> Central de Acolhimento e Intervenção
+                                </h2>
+                                <p style="color: var(--rodin-cool-gray); font-size: 13px; margin-top:2px;">Pipeline de escuta ativa, acompanhamento e suporte pedagógico</p>
+                            </div>
+                            <div class="filter-pill-bar">
+                                <div class="filter-pill-item">
+                                    <label>TURMA</label>
+                                    <select id="kanban-turma-select" onchange="renderizarKanban()"></select>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+                        <!-- Pipeline Kanban de 3 Colunas (Caixa de Entrada, Conversa Agendada, Em Análise 14d) -->
+                        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px;">
+                            
+                            <!-- 1. Caixa de Entrada -->
+                            <div class="kanban-cards-column" ondragover="permitirSoltarKanban(event)" ondragleave="removerDestaqueColunaKanban(event)" ondrop="soltarCardKanban(event, 'entrada')">
+                                <div style="font-size:13px; font-weight:900; color:#EF4444; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                                    <i class="ph-fill ph-tray" style="font-size:18px;"></i> Caixa de Entrada
+                                </div>
+                                <div id="col-kanban-entrada"></div>
+                            </div>
+
+                            <!-- 2. Conversa Agendada -->
+                            <div class="kanban-cards-column" ondragover="permitirSoltarKanban(event)" ondragleave="removerDestaqueColunaKanban(event)" ondrop="soltarCardKanban(event, 'agendada')">
+                                <div style="font-size:13px; font-weight:900; color:#F59E0B; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                                    <i class="ph-fill ph-calendar-blank" style="font-size:18px;"></i> Conversa Agendada
+                                </div>
+                                <div id="col-kanban-agendada"></div>
+                            </div>
+
+                            <!-- 3. Em Análise (14 Dias) -->
+                            <div class="kanban-cards-column" ondragover="permitirSoltarKanban(event)" ondragleave="removerDestaqueColunaKanban(event)" ondrop="soltarCardKanban(event, 'analise14')">
+                                <div style="font-size:13px; font-weight:900; color:#3B82F6; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                                    <i class="ph-fill ph-magnifying-glass" style="font-size:18px;"></i> Em Análise (14 Dias)
+                                </div>
+                                <div id="col-kanban-analise14"></div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL DE AGENDAMENTO DE CONVERSA DO ORIENTADOR -->
+    <div id="modal-agendar-conversa" class="modal-overlay" style="display:none; z-index:10026;">
+        <div class="modal-container-popup" style="max-width:480px; width:92%; background:#FFF; border-radius:24px; padding:24px; border:1px solid var(--rodin-line);">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--rodin-line); padding-bottom:12px; margin-bottom:16px;">
+                <h3 style="font-size:16px; font-weight:800; color:var(--rodin-graphite); margin:0; display:flex; align-items:center; gap:8px;">
+                    <i class="ph-bold ph-calendar-plus" style="color:var(--rodin-orange); font-size:22px;"></i> Agendar Conversa com o Aluno
+                </h3>
+                <button onclick="fecharModalAgendarConversa()" class="btn-close-light-round" title="Fechar">&times;</button>
+            </div>
+
+            <form id="form-agendar-conversa" onsubmit="salvarAgendamentoConversa(event)">
+                <input type="hidden" id="modal-agenda-aluno-id">
+
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px; background:#F8FAFC; padding:12px; border-radius:14px; border:1px solid var(--rodin-line);">
+                    <img id="modal-agenda-aluno-avatar" src="" style="width:48px; height:48px; border-radius:50%; object-fit:cover; border:2px solid var(--rodin-orange);">
+                    <div>
+                        <strong id="modal-agenda-aluno-nome" style="font-size:13px; color:var(--rodin-graphite); display:block;">Nome do Aluno</strong>
+                        <span id="modal-agenda-aluno-turma" style="font-size:11px; color:var(--rodin-cool-gray); font-weight:700;">6º ANO A</span>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px;">
+                    <div class="form-group">
+                        <label class="form-label" style="font-weight:800; color:var(--rodin-graphite);">Data da Conversa</label>
+                        <input type="date" id="modal-agenda-data" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="font-weight:800; color:var(--rodin-graphite);">Horário</label>
+                        <input type="time" id="modal-agenda-hora" class="form-control" required>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:12px; margin-top:20px;">
+                    <button type="button" class="btn-light-cancel" onclick="fecharModalAgendarConversa()" style="flex:1;">Cancelar</button>
+                    <button type="submit" class="btn-primary-rodin" style="flex:1.5; justify-content:center; gap:6px;">
+                        <i class="ph-bold ph-calendar-check"></i> Salvar Agendamento
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DE ANOTAÇÃO / AÇÃO OBRIGATÓRIA DO ORIENTADOR PEDAGÓGICO -->
+    <div id="modal-anotar-acao-orientador" class="modal-overlay" style="display:none; z-index:10025;">
+        <div class="modal-container-popup" style="max-width:520px; width:92%; background:#FFF; border-radius:24px; padding:24px; border:1px solid var(--rodin-line);">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--rodin-line); padding-bottom:12px; margin-bottom:16px;">
+                <h3 style="font-size:16px; font-weight:800; color:var(--rodin-graphite); margin:0; display:flex; align-items:center; gap:8px;">
+                    <i class="ph-bold ph-notebook" style="color:var(--rodin-orange); font-size:22px;"></i> Registrar Resultado da Conversa & Acordo
+                </h3>
+                <button onclick="fecharModalAcaoOrientador()" class="btn-close-light-round" title="Fechar">&times;</button>
+            </div>
+
+            <form id="form-anotacao-orientador" onsubmit="salvarAcaoOrientador(event)">
+                <input type="hidden" id="modal-orientador-aluno-id">
+                <input type="hidden" id="modal-orientador-destino">
+
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px; background:#F8FAFC; padding:12px; border-radius:14px; border:1px solid var(--rodin-line);">
+                    <img id="modal-orientador-aluno-avatar" src="" style="width:48px; height:48px; border-radius:50%; object-fit:cover; border:2px solid var(--rodin-orange);">
+                    <div>
+                        <strong id="modal-orientador-aluno-nome" style="font-size:13px; color:var(--rodin-graphite); display:block;">Nome do Aluno</strong>
+                        <span id="modal-orientador-aluno-turma" style="font-size:11px; color:var(--rodin-cool-gray); font-weight:700;">6º ANO A</span>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label class="form-label" style="font-weight:800; color:var(--rodin-graphite);">O que foi conversado e acordado entre o orientador e o aluno? (Obrigatório)</label>
+                    <textarea id="modal-orientador-texto-anotacao" class="form-control" rows="4" placeholder="Ex: Conversa individual realizada com o estudante sobre foco e convivência. Alinhamento de combinados com a família..." required minlength="5"></textarea>
+                </div>
+
+                <div style="display:flex; gap:12px; margin-top:20px;">
+                    <button type="button" class="btn-light-cancel" onclick="fecharModalAcaoOrientador()" style="flex:1;">Cancelar</button>
+                    <button type="submit" class="btn-primary-rodin" style="flex:1.5; justify-content:center; gap:6px;">
+                        <i class="ph-bold ph-check"></i> Salvar Acordo e Enviar p/ Análise (14d)
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DE HISTÓRICO COMPLETO DE OCORRÊNCIAS DO ALUNO -->
+    <div id="modal-historico-aluno-bi" class="modal-overlay" style="display:none; z-index:10020;">
+        <div class="modal-container-popup" style="max-width:540px; width:92%; background:#FFF; border-radius:24px; padding:24px; border:1px solid var(--rodin-line);">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--rodin-line); padding-bottom:14px; margin-bottom:16px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <img id="modal-bi-student-avatar" src="" style="width:48px; height:48px; border-radius:50%; object-fit:cover; border:2px solid var(--rodin-orange);">
+                    <div>
+                        <h3 id="modal-bi-student-nome" style="font-size:16px; font-weight:800; color:var(--rodin-graphite); margin:0;">Histórico do Aluno</h3>
+                        <span id="modal-bi-student-turma" style="font-size:11px; font-weight:700; color:var(--rodin-cool-gray);">6º ANO A</span>
+                    </div>
+                </div>
+                <button onclick="fecharModalHistoricoAlunoBI()" class="btn-close-light-round" title="Fechar">&times;</button>
+            </div>
+
+            <div id="modal-bi-oc-list" style="display:flex; flex-direction:column; gap:10px; max-height:420px; overflow-y:auto; padding-right:4px;"></div>
+        </div>
+    </div>
+
+
+
+    <!-- SCRIPTS -->
+    <script src="global.js"></script>
+    <script src="sidebar.js"></script>
+    <script src="/assets/js/face-api.min.js"></script>
+    <script src="face_security.js"></script>
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            renderizarSidebarModelo('central-acolhimento');
+            if (typeof inicializarApp === 'function') {
+                await inicializarApp();
+            }
+            if (typeof renderizarKanban === 'function') {
+                renderizarKanban();
+            }
+        });
+    </script>
+</body>
+</html>

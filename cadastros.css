@@ -1,0 +1,44 @@
+/* =============================================================
+   Estilos Específicos: Cadastros & Gestão de Usuários (cadastros.css)
+   ============================================================= */
+
+.cadastros-tabs-nav {
+  display: flex;
+  gap: 10px;
+  background: #F1F5F9;
+  padding: 6px;
+  border-radius: 14px;
+}
+
+.cad-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 10px;
+  border-radius: 10px;
+  font-family: var(--font-main);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--rodin-cool-gray);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cad-tab-btn.active {
+  background: #FFF;
+  color: var(--rodin-orange);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.student-avatar-dropzone {
+  border: 2px dashed var(--rodin-line);
+  border-radius: 16px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.student-avatar-dropzone:hover {
+  border-color: var(--rodin-orange);
+}

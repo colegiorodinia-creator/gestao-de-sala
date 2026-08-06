@@ -1,0 +1,87 @@
+/* =============================================================
+   Estilos Específicos: Visão de Sala (Professor - visao-professor.css)
+   ============================================================= */
+
+.view-professor-dark {
+  background-color: #090D16;
+  color: #FFF;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.prof-dark-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  background: #1E293B;
+  border: 1px solid #334155;
+  border-radius: 20px;
+  padding: 16px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.discipline-tag {
+  background: var(--rodin-orange);
+  color: #FFF;
+  font-size: 14px;
+  font-weight: 900;
+  padding: 4px 14px;
+  border-radius: 999px;
+  display: inline-block;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.class-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 22px;
+  font-weight: 900;
+  color: #FFF;
+  letter-spacing: 0.05em;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.prof-security-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.prof-security-pill.locked {
+  background: #FEF2F2;
+  color: #DC2626;
+  border: 1px solid #FCA5A5;
+}
+
+.prof-security-pill.unlocked {
+  background: #F0FDF4;
+  color: #16A34A;
+  border: 1px solid #86EFAC;
+}
+
+.clock-tag {
+  background: #0F172A;
+  color: #F8FAFC;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid #334155;
+}
+
+.photocards-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+}

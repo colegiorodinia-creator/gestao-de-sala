@@ -1,0 +1,212 @@
+[
+  {
+    "id": "aluno_6a_1",
+    "nome": "Alice Bianchi de Paula Roccato",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Alice%20Bianchi%20de%20Paula%20Roccato.png"
+  },
+  {
+    "id": "aluno_6a_2",
+    "nome": "Alice Prudêncio Costa",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Alice%20Prud%C3%AAncio%20Costa.png"
+  },
+  {
+    "id": "aluno_6a_3",
+    "nome": "Alice Sousa Xavier Silva",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Alice%20Sousa%20Xavier%20Silva.png"
+  },
+  {
+    "id": "aluno_6a_4",
+    "nome": "André Martins Melo",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Andr%C3%A9%20Martins%20Melo.png"
+  },
+  {
+    "id": "aluno_6a_5",
+    "nome": "André Moreno do Valle",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Andr%C3%A9%20Moreno%20do%20Valle.png"
+  },
+  {
+    "id": "aluno_6a_6",
+    "nome": "Benjamin Pistoni Denny",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Benjamin%20Pistoni%20Denny.png"
+  },
+  {
+    "id": "aluno_6a_7",
+    "nome": "Cecília Lira Vieira dos Santos",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Cec%C3%ADlia%20Lira%20Vieira%20dos%20Santos.png"
+  },
+  {
+    "id": "aluno_6a_8",
+    "nome": "Davi Luiz Mendes Cabral",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Davi%20Luiz%20Mendes%20Cabral.png"
+  },
+  {
+    "id": "aluno_6a_9",
+    "nome": "Enzo Huoliver de Andrade Cardoso",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Enzo%20Huoliver%20de%20Andrade%20Cardoso.png"
+  },
+  {
+    "id": "aluno_6a_10",
+    "nome": "Enzo Scarpelli Sciotti",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Enzo%20Scarpelli%20Sciotti.png"
+  },
+  {
+    "id": "aluno_6a_11",
+    "nome": "Ester Cardozo Arantes",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Ester%20Cardozo%20Arantes.png"
+  },
+  {
+    "id": "aluno_6a_12",
+    "nome": "Esther Seabra Inocêncio",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Esther%20Seabra%20Inoc%C3%AAncio.png"
+  },
+  {
+    "id": "aluno_6a_13",
+    "nome": "Federico Trapani",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Federico%20Trapani.png"
+  },
+  {
+    "id": "aluno_6a_14",
+    "nome": "Gabriel Prada Corrêa",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Gabriel%20Prada%20Corr%C3%AAa.png"
+  },
+  {
+    "id": "aluno_6a_15",
+    "nome": "Guilherme Beccari da Silva",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Guilherme%20Beccari%20da%20Silva.png"
+  },
+  {
+    "id": "aluno_6a_16",
+    "nome": "Guilherme Ferrareto de Moraes",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Guilherme%20Ferrareto%20de%20Moraes.png"
+  },
+  {
+    "id": "aluno_6a_17",
+    "nome": "Helena Annunciato Martins",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Helena%20Annunciato%20Martins.png"
+  },
+  {
+    "id": "aluno_6a_18",
+    "nome": "Helena de Genaro Borsari",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Helena%20de%20Genaro%20Borsari.png"
+  },
+  {
+    "id": "aluno_6a_19",
+    "nome": "Isabela de Lima Monegatto",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Isabela%20de%20Lima%20Monegatto.png"
+  },
+  {
+    "id": "aluno_6a_20",
+    "nome": "Isadora Sombini Rodrigues",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Isadora%20Sombini%20Rodrigues.png"
+  },
+  {
+    "id": "aluno_6a_21",
+    "nome": "João Mateus de Oliveira",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Jo%C3%A3o%20Mateus%20de%20Oliveira.png"
+  },
+  {
+    "id": "aluno_6a_22",
+    "nome": "João Vitor Braga Reis",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Jo%C3%A3o%20Vitor%20Braga%20Reis.png"
+  },
+  {
+    "id": "aluno_6a_23",
+    "nome": "Larissa Leal Maciel",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Larissa%20Leal%20Maciel.png"
+  },
+  {
+    "id": "aluno_6a_24",
+    "nome": "Lucas Ricardo Santana Hernandez",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Lucas%20Ricardo%20Santana%20Hernandez.png"
+  },
+  {
+    "id": "aluno_6a_25",
+    "nome": "Maria Clara Frazatto Geraldo",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Maria%20Clara%20Frazatto%20Geraldo.png"
+  },
+  {
+    "id": "aluno_6a_26",
+    "nome": "Matteo Kugelmeier Biancofiori",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Matteo%20Kugelmeier%20Biancofiori.png"
+  },
+  {
+    "id": "aluno_6a_27",
+    "nome": "Melissa dos Santos Ferraraccio",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Melissa%20dos%20Santos%20Ferraraccio.png"
+  },
+  {
+    "id": "aluno_6a_28",
+    "nome": "Melissa Morandi Botini",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Melissa%20Morandi%20Botini.png"
+  },
+  {
+    "id": "aluno_6a_29",
+    "nome": "Murilo Dumette Malveze Tedeschi Novais",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Murilo%20Dumette%20Malveze%20Tedeschi%20Novais.png"
+  },
+  {
+    "id": "aluno_6a_30",
+    "nome": "Sofia Fidelis Lima dos Santos",
+    "turma_id": "t1",
+    "condicao": "Nenhuma",
+    "avatar": "/assets/alunos/6anoa/Sofia%20Fidelis%20Lima%20dos%20Santos.png"
+  }
+]

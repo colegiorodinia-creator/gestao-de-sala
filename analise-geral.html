@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Portal Rodin — Análise Geral</title>
+    
+    <!-- Phosphor Icons (Self-Hosted) -->
+    <script src="/assets/js/phosphor.js"></script>
+    
+    <!-- Supabase JS Client & Global Module -->
+    <script src="/assets/js/supabase.js"></script>
+    <script src="global.js"></script>
+    <link rel="stylesheet" href="global.css">
+
+    <!-- html2pdf.js (Self-Hosted) -->
+    <script src="/assets/js/html2pdf.bundle.min.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-layout" id="app-layout">
+        
+        <!-- SIDEBAR DE NAVEGAÇÃO LATERAL (MODELO COMPARTILHADO VIA SIDEBAR.JS) -->
+        <aside class="sidebar-secondary" id="sidebar-secondary"></aside>
+
+        <!-- ÁREA DE CONTEÚDO PRINCIPAL -->
+        <main class="main-content">
+            
+            <!-- HEADER PRINCIPAL (BREADCRUMBS) -->
+            <header class="main-header" id="main-header">
+                <div class="header-breadcrumbs">
+                    <span>Portal Rodin</span> <i class="ph ph-caret-right"></i> <strong id="current-page-title">Análise Geral</strong>
+                </div>
+            </header>
+
+            <div class="view-scroll-container" id="view-scroll-container">
+                <div id="view-gestao" class="view-container active">
+                    
+                    <!-- 1. ANÁLISE GERAL -->
+                    <div id="view-geral" class="sub-view active">
+                        <!-- Card Header de Analytics com Filtros Pill -->
+                        <div class="rodin-panel-card" style="display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <h2 style="font-size: 20px; display:flex; align-items:center; gap:8px;">
+                                    <i class="ph-bold ph-chart-bar" style="color:var(--rodin-orange);"></i> Análise Geral
+                                </h2>
+                                <p style="color: var(--rodin-cool-gray); font-size: 13px; margin-top:2px;">Acompanhamento pedagógico e de frequência em tempo real</p>
+                            </div>
+                            <div class="filter-pill-bar">
+                                <div class="filter-pill-item">
+                                    <label>PERÍODO</label>
+                                    <select id="bi-periodo-select" onchange="alternarFiltroPeriodo('bi')">
+                                        <option value="tudo">Todo o Período</option>
+                                        <option value="hoje">Hoje</option>
+                                        <option value="7d">Últimos 7 dias</option>
+                                        <option value="30d">Últimos 30 dias</option>
+                                        <option value="personalizado">Personalizado</option>
+                                    </select>
+                                </div>
+                                <div class="filter-pill-item" id="bi-custom-dates" style="display:none;">
+                                    <label>DE / ATÉ</label>
+                                    <div style="display:flex; gap:6px; align-items:center;">
+                                        <input type="date" id="bi-date-start" onchange="atualizarBiGeral()" style="padding:6px; border-radius:8px; border:1px solid var(--rodin-line); font-size:11px;">
+                                        <span style="font-size:10px; color:var(--rodin-cool-gray);">até</span>
+                                        <input type="date" id="bi-date-end" onchange="atualizarBiGeral()" style="padding:6px; border-radius:8px; border:1px solid var(--rodin-line); font-size:11px;">
+                                    </div>
+                                </div>
+                                <div class="filter-pill-item">
+                                    <label>FOCO</label>
+                                    <select id="bi-foco-turma" onchange="atualizarBiGeral()"></select>
+                                </div>
+                                <div class="filter-pill-item">
+                                    <label>COMPARAR COM</label>
+                                    <select id="bi-comparar-select" onchange="atualizarBiGeral()">
+                                        <option value="periodo_anterior">Período Anterior</option>
+                                        <option value="escola">Escola Toda</option>
+                                        <option value="etapa">Mesma Etapa</option>
+                                    </select>
+                                </div>               </div>
+                            </div>
+                        </div>
+
+                        <!-- 3 Stat KPI Cards -->
+                        <div class="stats-kpi-grid">
+                            <div class="stat-kpi-card">
+                                <div class="stat-kpi-icon-box total"><i class="ph-bold ph-clipboard-text"></i></div>
+                                <div class="stat-kpi-number-row">
+                                    <span class="val" id="bi-stat-total">0</span>
+                                    <span class="sub">Média: 0/aluno</span>
+                                </div>
+                                <div class="stat-kpi-label">Total de Ocorrências</div>
+                                <span class="stat-kpi-tag up">↗ +5% vs Média</span>
+                            </div>
+                            <div class="stat-kpi-card">
+                                <div class="stat-kpi-icon-box sonolencia"><i class="ph-bold ph-moon"></i></div>
+                                <div class="stat-kpi-number-row">
+                                    <span class="val" id="bi-stat-sonolencia">0</span>
+                                    <span class="sub">Média: 0/aluno</span>
+                                </div>
+                                <div class="stat-kpi-label">Sonolência / Dormindo</div>
+                                <span class="stat-kpi-tag down">↘ -31% vs Média</span>
+                            </div>
+                            <div class="stat-kpi-card">
+                                <div class="stat-kpi-icon-box desvios"><i class="ph-bold ph-warning-circle"></i></div>
+                                <div class="stat-kpi-number-row">
+                                    <span class="val" id="bi-stat-desvios">0</span>
+                                    <span class="sub">Média: 0/aluno</span>
+                                </div>
+                                <div class="stat-kpi-label">Desvios de Conduta</div>
+                                <span class="stat-kpi-tag up">↗ +15% vs Média</span>
+                            </div>
+                        </div>
+
+                        <!-- Mapa de Sala com Photocards -->
+                        <div class="rodin-panel-card">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                                <h3 style="font-size: 16px; color:var(--rodin-graphite);" id="bi-mapa-titulo">Mapa de Sala (Selecione uma Turma)</h3>
+                            </div>
+
+                            <div id="bi-photocards-grid" class="photocards-grid"></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAIS DO SISTEMA -->
+    <div id="modal-historico-aluno-bi" class="modal-overlay" style="display:none; z-index: 10008;">
+        <div class="modal-container-popup" style="max-width: 540px; width:92%; border-radius:24px; padding:24px; background:#FFF;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--rodin-line); padding-bottom:14px;">
+                <div style="display:flex; align-items:center; gap:14px;">
+                    <img id="modal-bi-student-avatar" src="" style="width:52px; height:52px; border-radius:50%; object-fit:cover; border:2px solid var(--rodin-line);">
+                    <div>
+                        <h3 id="modal-bi-student-nome" style="font-size:16px; font-weight:800; color:var(--rodin-graphite); margin:0;">Ocorrências de Aluno</h3>
+                        <span id="modal-bi-student-turma" class="student-turma-badge" style="margin-top:4px;">6º ANO A</span>
+                    </div>
+                </div>
+                <button onclick="fecharModalHistoricoAlunoBI()" class="btn-close-light-round" title="Fechar">&times;</button>
+            </div>
+            <div id="modal-bi-oc-list" style="display:flex; flex-direction:column; gap:12px; max-height:420px; overflow-y:auto; padding-right:4px;"></div>
+        </div>
+    </div>
+
+
+
+    <!-- SCRIPTS -->
+    <script src="global.js"></script>
+    <script src="sidebar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
+    <script src="face_security.js"></script>
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            renderizarSidebarModelo('analise-geral');
+            if (typeof inicializarApp === 'function') {
+                await inicializarApp();
+            }
+            if (typeof atualizarBiGeral === 'function') {
+                atualizarBiGeral();
+            }
+        });
+    </script>
+</body>
+</html>
