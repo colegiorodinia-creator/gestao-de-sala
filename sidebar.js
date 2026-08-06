@@ -15,13 +15,18 @@ function renderizarSidebarModelo(activePageId) {
         { id: 'visao-professor', url: 'visao-professor.html', icon: 'ph-chalkboard-teacher', label: 'Visão de Sala (Professor)', isSpecial: true }
     ];
 
+    const esc = window.escapeHTML || (s => String(s || ''));
+
     const navHtml = navItems.map(item => {
         const isActive = item.id === activePageId ? 'active' : '';
         const extraClass = item.isSpecial ? 'btn-prof-sala-link' : '';
+        const safeLabel = esc(item.label);
+        const safeUrl = esc(item.url);
+        const safeIcon = esc(item.icon);
         return `
-            <a href="${item.url}" class="menu-link ${isActive} ${extraClass}" title="${item.label}">
-                <i class="ph-bold ${item.icon}"></i>
-                <span class="menu-link-text">${item.label}</span>
+            <a href="${safeUrl}" class="menu-link ${isActive} ${extraClass}" title="${safeLabel}">
+                <i class="ph-bold ${safeIcon}"></i>
+                <span class="menu-link-text">${safeLabel}</span>
             </a>
         `;
     }).join('');
@@ -52,12 +57,12 @@ function renderizarSidebarModelo(activePageId) {
         </div>
 
         <!-- RODAPÉ DA SIDEBAR: PERFIL DO USUÁRIO LOGADO + BOTÃO DE SAIR -->
-        <div class="sidebar-footer-profile" style="cursor:default;" title="Usuário Autenticado: ${usr.nome}">
+        <div class="sidebar-footer-profile" style="cursor:default;" title="Usuário Autenticado: ${esc(usr.nome)}">
             <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:0; overflow:hidden;">
-                <img id="user-profile-avatar" src="${usr.foto}" alt="Foto do Usuário" class="avatar-user-img">
+                <img id="user-profile-avatar" src="${esc(usr.foto)}" alt="Foto do Usuário" class="avatar-user-img">
                 <div class="user-info">
-                    <h3 id="user-profile-name">${usr.nome}</h3>
-                    <span id="user-profile-role">${usr.cargo}</span>
+                    <h3 id="user-profile-name">${esc(usr.nome)}</h3>
+                    <span id="user-profile-role">${esc(usr.cargo)}</span>
                 </div>
             </div>
             <button class="btn-profile-options" onclick="fazerLogoutSistema()" title="Sair do Portal Rodin" style="color:#EF4444;">

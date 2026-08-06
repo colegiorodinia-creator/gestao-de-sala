@@ -304,10 +304,9 @@
 
         function validarLoginMonitoria(event) {
             event.preventDefault();
-            const user = document.getElementById('sala-login-user').value.trim();
-            const pass = document.getElementById('sala-login-pass').value;
+            const user = (document.getElementById('sala-login-user').value || '').trim();
+            const pass = (document.getElementById('sala-login-pass').value || '');
             const errorEl = document.getElementById('sala-login-error');
-            console.log("Tentativa de login monitoria - Usuário:", user, "Senha:", pass);
             
             if (user === 'monitoria' && pass === 'Rod!n112358*') {
                 sessionStorage.setItem('rodin_sala_auth', 'true');

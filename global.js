@@ -10,6 +10,20 @@ if (window.location.search.includes('clear=true')) {
     window.location.href = window.location.pathname;
 }
 
+window.escapeHTML = function(str) {
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/[&<>"']/g, function(match) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        };
+        return map[match];
+    });
+};
+
 window.supabaseUrl = 'https://vjnfkaenqrprtsiuqilb.supabase.co';
 window.supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqbmZrYWVucXJwcnRzaXVxaWxiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNjI4MTEsImV4cCI6MjEwMDkzODgxMX0.n0LW0qZXQhUaaHaXSy-3QPzoGVsS8SJc9-gDNcvzGhg';
 

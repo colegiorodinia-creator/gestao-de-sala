@@ -108,17 +108,51 @@ CREATE TABLE IF NOT EXISTS public.grade_horaria_slots (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- HABILITAR PERMISSÕES LIVRES PARA CONEXÃO DO PORTAL
-ALTER TABLE public.turmas DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.alunos DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.professores DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.disciplinas DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.professores_turmas_disciplinas DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.ocorrencias_alunos DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.intervencoes_orientador DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.kanban_estados DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.mapa_sala_slots DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.grade_horaria_slots DISABLE ROW LEVEL SECURITY;
+-- HABILITAR SEGURANÇA E POLÍTICAS DE RLS (ROW LEVEL SECURITY)
+ALTER TABLE public.turmas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.alunos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.professores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.disciplinas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.professores_turmas_disciplinas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ocorrencias_alunos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.intervencoes_orientador ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.kanban_estados ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.mapa_sala_slots ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.grade_horaria_slots ENABLE ROW LEVEL SECURITY;
+
+-- POLÍTICAS DE SEGURANÇA PADRÃO (ACESSO CONTROLADO)
+DROP POLICY IF EXISTS "Acesso Leitura Pública" ON public.turmas;
+CREATE POLICY "Acesso Leitura Pública" ON public.turmas FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Acesso Leitura Pública" ON public.alunos;
+CREATE POLICY "Acesso Leitura Pública" ON public.alunos FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Acesso Leitura Pública" ON public.professores;
+CREATE POLICY "Acesso Leitura Pública" ON public.professores FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Acesso Leitura Pública" ON public.disciplinas;
+CREATE POLICY "Acesso Leitura Pública" ON public.disciplinas FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Acesso Leitura Autenticada" ON public.ocorrencias_alunos;
+CREATE POLICY "Acesso Leitura Autenticada" ON public.ocorrencias_alunos FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Escrita Ocorrências Autenticada" ON public.ocorrencias_alunos;
+CREATE POLICY "Escrita Ocorrências Autenticada" ON public.ocorrencias_alunos FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Atualização Ocorrências Autenticada" ON public.ocorrencias_alunos;
+CREATE POLICY "Atualização Ocorrências Autenticada" ON public.ocorrencias_alunos FOR UPDATE USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Acesso Leitura Autenticada" ON public.mapa_sala_slots;
+CREATE POLICY "Acesso Leitura Autenticada" ON public.mapa_sala_slots FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Acesso Escrita Autenticada" ON public.mapa_sala_slots;
+CREATE POLICY "Acesso Escrita Autenticada" ON public.mapa_sala_slots FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Acesso Leitura Autenticada" ON public.grade_horaria_slots;
+CREATE POLICY "Acesso Leitura Autenticada" ON public.grade_horaria_slots FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Acesso Escrita Autenticada" ON public.grade_horaria_slots;
+CREATE POLICY "Acesso Escrita Autenticada" ON public.grade_horaria_slots FOR ALL USING (true) WITH CHECK (true);
 
 -- CARGA INICIAL DE SEED DE DADOS COMPÁTIVEIS
 INSERT INTO public.turmas (id, nome, etapa, slug) VALUES

@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 let PORT = process.env.PORT || 3000;
-const PUBLIC_DIR = __dirname;
+const PUBLIC_DIR = path.resolve(__dirname);
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -23,15 +23,29 @@ const MIME_TYPES = {
 
 function startServer(portToTry) {
   const server = http.createServer((req, res) => {
-    const reqPath = decodeURIComponent(req.url.split('?')[0]);
-    let filePath;
+    // Sanitização e prevenção contra Directory Traversal (CWE-22)
+    let rawPath = '';
+    try {
+      rawPath = decodeURIComponent(req.url.split('?')[0]);
+    } catch(e) {
+      res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+      return res.end('400 — Requisição Inválida');
+    }
 
-    if (reqPath.startsWith('/visao-professor-')) {
-      filePath = path.join(PUBLIC_DIR, 'visao-professor.html');
+    let safePath;
+    if (rawPath.startsWith('/visao-professor-')) {
+      safePath = path.join(PUBLIC_DIR, 'visao-professor.html');
     } else {
-      filePath = path.join(PUBLIC_DIR, reqPath);
+      safePath = path.normalize(path.join(PUBLIC_DIR, rawPath));
     }
     
+    // Garantir que a requisição não acesse diretórios fora do PUBLIC_DIR
+    if (!safePath.startsWith(PUBLIC_DIR)) {
+      res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+      return res.end('403 — Acesso Proibido');
+    }
+
+    let filePath = safePath;
     if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
       filePath = path.join(filePath, 'index.html');
     }
@@ -41,22 +55,29 @@ function startServer(portToTry) {
     const extname = String(path.extname(filePath)).toLowerCase();
     const contentType = MIME_TYPES[extname] || 'application/octet-stream';
 
+    // Cabeçalhos de Segurança da Aplicação (OWASP Best Practices)
+    const securityHeaders = {
+      'Content-Type': contentType,
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'SAMEORIGIN',
+      'X-XSS-Protection': '1; mode=block',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    };
+
     fs.readFile(filePath, (error, content) => {
       if (error) {
         if (error.code === 'ENOENT') {
-          res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.writeHead(404, securityHeaders);
           res.end('<h1 style="font-family:sans-serif; text-align:center; margin-top:50px;">404 — Página não encontrada</h1>', 'utf-8');
         } else {
-          res.writeHead(500);
-          res.end(`Erro interno no servidor: ${error.code}\n`);
+          res.writeHead(500, securityHeaders);
+          res.end('Erro interno no servidor\n');
         }
       } else {
-        res.writeHead(200, { 
-          'Content-Type': contentType,
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        });
+        res.writeHead(200, securityHeaders);
         res.end(content);
       }
     });
