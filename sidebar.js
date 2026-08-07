@@ -7,7 +7,7 @@ function renderizarSidebarModelo(activePageId) {
     if (!sidebarContainer) return;
 
     const navItems = [
-        { id: 'analise-geral', url: 'analise-geral.html', icon: 'ph-chart-bar', label: 'Gestão de Mapa' },
+        { id: 'analise-geral', url: 'analise-geral.html', icon: 'ph-chart-bar', label: 'Análise Geral' },
         { id: 'raio-x-aluno', url: 'raio-x-aluno.html', icon: 'ph-user-focus', label: 'Raio-X do Aluno' },
         // { id: 'central-acolhimento', url: 'central-acolhimento.html', icon: 'ph-hand-heart', label: 'Central de Acolhimento' }, // Reservado para Versão 2
         { id: 'setup-turma', url: 'setup-turma.html', icon: 'ph-wrench', label: 'Setup de Turma' },
