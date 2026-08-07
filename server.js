@@ -93,7 +93,7 @@ function startServer(portToTry) {
   });
 
   server.listen(portToTry, () => {
-    console.log(`🚀 Gestão de Sala v2.0 rodando em http://localhost:${portToTry}/`);
+    console.log(`🚀 Gestão de Mapa v2.0 rodando em http://localhost:${portToTry}/`);
   });
 }
 

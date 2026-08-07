@@ -65,7 +65,7 @@ function renderizarSidebarModelo(activePageId) {
                     <span id="user-profile-role">${esc(usr.cargo)}</span>
                 </div>
             </div>
-            <button class="btn-profile-options" onclick="fazerLogoutSistema()" title="Sair do Portal Rodin" style="color:#EF4444;">
+            <button class="btn-profile-options" onclick="fazerLogoutSistema()" title="Sair do Gestão de Mapa" style="color:#EF4444;">
                 <i class="ph-bold ph-sign-out" style="font-size:18px;"></i>
             </button>
         </div>
