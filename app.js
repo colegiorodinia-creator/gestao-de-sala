@@ -608,7 +608,11 @@ function atualizarBiGeral() {
     }
     const numAlunos = alunosEscopo.length || 1;
 
-    const totalOcs = ocs.length;
+    const totalSaidas = ocs.filter(o => {
+        const t = (o.tipo || '').toUpperCase();
+        return t.includes('BANHEIRO') || t.includes('BEBEDOURO') || t.includes('SAIDA') || t.includes('SAÍDA');
+    }).length;
+
     const totalSonolencia = ocs.filter(o => {
         const t = (o.tipo || '').toUpperCase();
         return t.includes('DORMINDO') || t.includes('SONOLENTO');
@@ -616,24 +620,24 @@ function atualizarBiGeral() {
     
     const totalDesvios = ocs.filter(o => {
         const t = (o.tipo || '').toUpperCase();
-        return !t.includes('DORMINDO') && !t.includes('SONOLENTO') && !t.includes('FOI AO BANHEIRO');
+        return !t.includes('DORMINDO') && !t.includes('SONOLENTO') && !t.includes('BANHEIRO') && !t.includes('BEBEDOURO') && !t.includes('SAIDA') && !t.includes('SAÍDA');
     }).length;
 
     // Atualizar números KPI nas caixas
-    const elTotal = document.getElementById('bi-stat-total');
+    const elSaidas = document.getElementById('bi-stat-saidas') || document.getElementById('bi-stat-total');
     const elSonolencia = document.getElementById('bi-stat-sonolencia');
     const elDesvios = document.getElementById('bi-stat-desvios');
 
-    if (elTotal) elTotal.innerText = totalOcs;
+    if (elSaidas) elSaidas.innerText = totalSaidas;
     if (elSonolencia) elSonolencia.innerText = totalSonolencia;
     if (elDesvios) elDesvios.innerText = totalDesvios;
 
     // Atualizar subtextos de média por aluno
-    const cardTotalSub = document.querySelector('.stat-kpi-card:nth-child(1) .sub');
+    const cardSaidasSub = document.querySelector('.stat-kpi-card:nth-child(1) .sub');
     const cardSonolenciaSub = document.querySelector('.stat-kpi-card:nth-child(2) .sub');
     const cardDesviosSub = document.querySelector('.stat-kpi-card:nth-child(3) .sub');
 
-    if (cardTotalSub) cardTotalSub.innerText = `Média: ${(totalOcs / numAlunos).toFixed(1)}/aluno`;
+    if (cardSaidasSub) cardSaidasSub.innerText = `Média: ${(totalSaidas / numAlunos).toFixed(1)}/aluno`;
     if (cardSonolenciaSub) cardSonolenciaSub.innerText = `Média: ${(totalSonolencia / numAlunos).toFixed(1)}/aluno`;
     if (cardDesviosSub) cardDesviosSub.innerText = `Média: ${(totalDesvios / numAlunos).toFixed(1)}/aluno`;
 
@@ -679,8 +683,11 @@ function atualizarBiGeral() {
         ocsComparacao = db.ocorrencias.filter(o => turmasEtapaIds.includes(o.turma_id));
     }
 
-    const prevTotal = ocsComparacao.length;
-    const diffTotal = prevTotal === 0 ? 0 : Math.round(((totalOcs - prevTotal) / prevTotal) * 100);
+    const prevSaidas = ocsComparacao.filter(o => {
+        const t = (o.tipo || '').toUpperCase();
+        return t.includes('BANHEIRO') || t.includes('BEBEDOURO') || t.includes('SAIDA') || t.includes('SAÍDA');
+    }).length;
+    const diffSaidas = prevSaidas === 0 ? 0 : Math.round(((totalSaidas - prevSaidas) / prevSaidas) * 100);
 
     const prevSonolencia = ocsComparacao.filter(o => {
         const t = (o.tipo || '').toUpperCase();
@@ -690,18 +697,18 @@ function atualizarBiGeral() {
 
     const prevDesvios = ocsComparacao.filter(o => {
         const t = (o.tipo || '').toUpperCase();
-        return !t.includes('DORMINDO') && !t.includes('SONOLENTO') && !t.includes('FOI AO BANHEIRO');
+        return !t.includes('DORMINDO') && !t.includes('SONOLENTO') && !t.includes('BANHEIRO') && !t.includes('BEBEDOURO') && !t.includes('SAIDA') && !t.includes('SAÍDA');
     }).length;
     const diffDesvios = prevDesvios === 0 ? 0 : Math.round(((totalDesvios - prevDesvios) / prevDesvios) * 100);
 
-    const tagTotal = document.querySelector('.stat-kpi-card:nth-child(1) .stat-kpi-tag');
+    const tagSaidas = document.querySelector('.stat-kpi-card:nth-child(1) .stat-kpi-tag');
     const tagSonolencia = document.querySelector('.stat-kpi-card:nth-child(2) .stat-kpi-tag');
     const tagDesvios = document.querySelector('.stat-kpi-card:nth-child(3) .stat-kpi-tag');
 
-    if (tagTotal) {
-        const sinal = diffTotal >= 0 ? '↗ +' : '↘ ';
-        tagTotal.innerText = `${sinal}${diffTotal}% ${labelComparar}`;
-        tagTotal.className = `stat-kpi-tag ${diffTotal >= 0 ? 'up' : 'down'}`;
+    if (tagSaidas) {
+        const sinal = diffSaidas >= 0 ? '↗ +' : '↘ ';
+        tagSaidas.innerText = `${sinal}${diffSaidas}% ${labelComparar}`;
+        tagSaidas.className = `stat-kpi-tag ${diffSaidas >= 0 ? 'up' : 'down'}`;
     }
     if (tagSonolencia) {
         const sinal = diffSonolencia >= 0 ? '↗ +' : '↘ ';
@@ -752,7 +759,7 @@ function atualizarBiGeral() {
     }
 }
 
-function renderBadgesPhotocard(alunoId, ocsLista) {
+function renderBadgesPhotocard(alunoId, ocsLista, isProfVisao = false) {
     const ocsAluno = ocsLista.filter(o => o.aluno_id === alunoId);
 
     const countSaidas = ocsAluno.filter(o => {
@@ -765,20 +772,31 @@ function renderBadgesPhotocard(alunoId, ocsLista) {
         return t.includes('DORMINDO') || t.includes('SONOLENTO');
     }).length;
 
-    if (countSaidas === 0 && countSonolencia === 0) return '';
+    const countDesvios = isProfVisao ? 0 : ocsAluno.filter(o => {
+        const t = (o.tipo || '').toUpperCase();
+        return !t.includes('DORMINDO') && !t.includes('SONOLENTO') && !t.includes('BANHEIRO') && !t.includes('BEBEDOURO') && !t.includes('SAIDA') && !t.includes('SAÍDA');
+    }).length;
+
+    if (countSaidas === 0 && countSonolencia === 0 && countDesvios === 0) return '';
 
     return `
         <div class="photocard-badges-row">
             ${countSaidas > 0 ? `
-                <div class="badge-stat-item saidas" title="${countSaidas} saída(s) de sala nas últimas 24h">
+                <div class="badge-stat-item saidas" title="${countSaidas} ida(s) ao banheiro/bebedouro hoje">
                     <div class="badge-icon-circle"><i class="ph-bold ph-door-open"></i></div>
                     <span>${countSaidas}</span>
                 </div>
             ` : ''}
             ${countSonolencia > 0 ? `
-                <div class="badge-stat-item sonolencia" title="${countSonolencia} episódio(s) de sonolência nas últimas 24h">
+                <div class="badge-stat-item sonolencia" title="${countSonolencia} episódio(s) de sonolência hoje">
                     <div class="badge-icon-circle"><i class="ph-bold ph-moon"></i></div>
                     <span>${countSonolencia}</span>
+                </div>
+            ` : ''}
+            ${(!isProfVisao && countDesvios > 0) ? `
+                <div class="badge-stat-item desvios" title="${countDesvios} desvio(s) de conduta">
+                    <div class="badge-icon-circle"><i class="ph-bold ph-warning-circle"></i></div>
+                    <span>${countDesvios}</span>
                 </div>
             ` : ''}
         </div>
@@ -3079,13 +3097,11 @@ function carregarMapaProfessor() {
         }).catch(() => {});
     }
 
-    // Ocorrências registradas nas últimas 24 HORAS
+    // Ocorrências registradas estritamente no DIA DE HOJE
     const agora = new Date();
-    const janela24h = 24 * 60 * 60 * 1000;
-    const ocs24h = (db.ocorrencias || []).filter(o => {
+    const ocsHoje = (db.ocorrencias || []).filter(o => {
         const dt = new Date(o.created_at || o.data || o.data_ocorrencia);
-        const diff = agora - dt;
-        return !isNaN(dt.getTime()) && diff >= 0 && diff <= janela24h;
+        return !isNaN(dt.getTime()) && dt.toDateString() === agora.toDateString();
     });
 
     const grid = document.getElementById('prof-photocards-grid');
@@ -3119,7 +3135,7 @@ function carregarMapaProfessor() {
                         <div class="photocard-gradient-overlay" style="padding:8px 10px; flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; text-align:center;">
                             <div class="student-name-text" style="font-size:12.5px; font-weight:800; color:#FFF; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; width:100%;" title="${aluno.nome}">${nomeResumido}</div>
                             ${condHtml}
-                            ${renderBadgesPhotocard(aluno.id, ocs24h)}
+                            ${renderBadgesPhotocard(aluno.id, ocsHoje, true)}
                         </div>
                     </div>
                 `;
