@@ -92,8 +92,8 @@ function startServer(portToTry) {
     }
   });
 
-  server.listen(portToTry, () => {
-    console.log(`🚀 Gestão de Mapa v2.0 rodando em http://localhost:${portToTry}/`);
+  server.listen(portToTry, '0.0.0.0', () => {
+    console.log(`🚀 Gestão de Mapa v2.0 rodando em http://0.0.0.0:${portToTry}/`);
   });
 }
 
