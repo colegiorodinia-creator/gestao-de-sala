@@ -28,7 +28,58 @@
 <body>
 
     <div class="app-layout" id="app-layout">
-        <aside class="sidebar-secondary" id="sidebar-secondary"></aside>
+        <aside class="sidebar-secondary" id="sidebar-secondary">
+            <!-- TOPO DA SIDEBAR: LOGO HORIZONTAL OFICIAL + BOTÃO DE COLAPSO -->
+            <div class="sidebar-header">
+                <div class="brand-logo-box">
+                    <img src="logotipo-colegio-rodin.png" alt="Colégio Rodin" class="brand-logo-img">
+                </div>
+                <button class="sidebar-toggle-btn" onclick="window.toggleSidebarCollapse()" title="Recolher / Expandir Menu">
+                    <i class="ph-bold ph-sidebar-simple"></i>
+                </button>
+            </div>
+
+            <!-- NAVEGAÇÃO CENTRAL -->
+            <div class="menu-tree">
+                <h4 class="menu-title">GESTÃO OPERACIONAL</h4>
+                <div class="sub-nav">
+                    <a href="analise-geral.html" class="menu-link" title="Análise Geral">
+                        <i class="ph-bold ph-chart-bar"></i>
+                        <span class="menu-link-text">Análise Geral</span>
+                    </a>
+                    <a href="raio-x-aluno.html" class="menu-link active" title="Raio-X do Aluno">
+                        <i class="ph-bold ph-user-focus"></i>
+                        <span class="menu-link-text">Raio-X do Aluno</span>
+                    </a>
+                    <a href="setup-turma.html" class="menu-link" title="Setup de Turma">
+                        <i class="ph-bold ph-wrench"></i>
+                        <span class="menu-link-text">Setup de Turma</span>
+                    </a>
+                    <a href="cadastros.html" class="menu-link" title="Cadastros">
+                        <i class="ph-bold ph-user-plus"></i>
+                        <span class="menu-link-text">Cadastros</span>
+                    </a>
+                    <a href="visao-professor.html" class="menu-link btn-prof-sala-link" title="Visão de Sala (Professor)">
+                        <i class="ph-bold ph-chalkboard-teacher"></i>
+                        <span class="menu-link-text">Visão de Sala (Professor)</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- RODAPÉ DA SIDEBAR: PERFIL DO USUÁRIO LOGADO + BOTÃO DE SAIR -->
+            <div class="sidebar-footer-profile" style="cursor:default;">
+                <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:0; overflow:hidden;">
+                    <img id="user-profile-avatar" src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=150&q=80" alt="Foto do Usuário" class="avatar-user-img">
+                    <div class="user-info">
+                        <h3 id="user-profile-name">Benedito Donizete Bueno da Silva</h3>
+                        <span id="user-profile-role">Direção Geral (Admin)</span>
+                    </div>
+                </div>
+                <button class="btn-profile-options" onclick="window.fazerLogoutSistema()" title="Sair do Gestão de Mapa" style="color:#EF4444; background:transparent; border:none; cursor:pointer; padding:6px; display:flex; align-items:center; justify-content:center;">
+                    <i class="ph-bold ph-sign-out" style="font-size:18px;"></i>
+                </button>
+            </div>
+        </aside>
 
         <main class="main-content">
             <header class="main-header" id="main-header">
