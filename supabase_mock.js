@@ -364,6 +364,7 @@
         }
     }
     
+    if (!window.supabase) window.supabase = {};
     window.supabase.createClient = function(url, key) {
         if (originalCreateClient) {
             try {

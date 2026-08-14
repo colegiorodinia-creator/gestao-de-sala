@@ -8,11 +8,14 @@
     <link rel="shortcut icon" href="favicon.ico">
     <title>Gestão de Mapa — Acessar o Portal</title>
     
-    <!-- Phosphor Icons -->
+    <!-- Phosphor Icons CDN -->
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
     <script src="/assets/js/phosphor.js"></script>
     
     <!-- Supabase Client & Global Scripts -->
-    <script src="/assets/js/supabase.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="global.js"></script>
     <link rel="stylesheet" href="global.css">
 
@@ -85,17 +88,19 @@
             align-items: center;
         }
 
-        .input-box i {
+        .input-left-icon {
             position: absolute;
             left: 14px;
-            font-size: 18px;
-            color: #94A3B8;
+            font-size: 20px;
+            color: #64748B;
+            pointer-events: none;
+            z-index: 2;
         }
 
         .simple-input {
             width: 100%;
-            height: 46px;
-            padding: 0 14px 0 44px;
+            height: 48px;
+            padding: 0 44px 0 44px;
             border: 1.5px solid var(--rodin-line);
             border-radius: 12px;
             font-size: 14px;
@@ -110,6 +115,28 @@
             border-color: var(--rodin-orange);
             background: #FFFFFF;
             box-shadow: 0 0 0 3px rgba(244, 82, 6, 0.12);
+        }
+
+        .toggle-password-btn {
+            position: absolute;
+            right: 12px;
+            background: transparent;
+            border: none;
+            color: #64748B;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            z-index: 2;
+        }
+
+        .toggle-password-btn:hover {
+            color: var(--rodin-orange);
+            background: #FFF7ED;
         }
 
         .btn-enter-portal {
@@ -207,16 +234,19 @@
             <div class="form-group-simple">
                 <label for="login-email">E-mail Institucional</label>
                 <div class="input-box">
-                    <i class="ph-bold ph-envelope-simple"></i>
-                    <input type="email" id="login-email" class="simple-input" placeholder="seu.email@colegiorodin.com.br" required value="direcao@colegiorodin.com.br">
+                    <i class="ph-bold ph-envelope-simple input-left-icon"></i>
+                    <input type="email" id="login-email" class="simple-input" placeholder="seu.email@colegiorodin.com.br" required>
                 </div>
             </div>
 
             <div class="form-group-simple">
                 <label for="login-password">Senha de Acesso</label>
                 <div class="input-box">
-                    <i class="ph-bold ph-lock-simple"></i>
-                    <input type="password" id="login-password" class="simple-input" placeholder="••••••••" required value="rodin2026">
+                    <i class="ph-bold ph-lock-simple input-left-icon"></i>
+                    <input type="password" id="login-password" class="simple-input" placeholder="••••••••" required>
+                    <button type="button" class="toggle-password-btn" onclick="toggleSenhaVisivel()" title="Mostrar ou Ocultar Senha">
+                        <i id="eye-icon" class="ph-bold ph-eye"></i>
+                    </button>
                 </div>
             </div>
 
@@ -225,22 +255,21 @@
                 <i class="ph-bold ph-arrow-right"></i>
             </button>
         </form>
-
-        <!-- ACESSO RÁPIDO SIMPLIFICADO PARA TESTES -->
-        <div class="quick-test-section">
-            <div class="quick-test-label">Acesso Rápido para Teste</div>
-            <div class="quick-buttons-row">
-                <button type="button" class="btn-quick-role" onclick="preencherEEntrar('direcao@colegiorodin.com.br', 'rodin2026')">
-                    <i class="ph-bold ph-crown" style="color:var(--rodin-orange);"></i> Direção Geral
-                </button>
-                <button type="button" class="btn-quick-role" onclick="preencherEEntrar('orientacao@colegiorodin.com.br', 'rodin2026')">
-                    <i class="ph-bold ph-user-focus" style="color:var(--rodin-orange);"></i> Orientação (6º/7º)
-                </button>
-            </div>
-        </div>
     </div>
 
     <script>
+        function toggleSenhaVisivel() {
+            const passInput = document.getElementById('login-password');
+            const eyeIcon = document.getElementById('eye-icon');
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                eyeIcon.className = 'ph-bold ph-eye-slash';
+            } else {
+                passInput.type = 'password';
+                eyeIcon.className = 'ph-bold ph-eye';
+            }
+        }
+
         function preencherEEntrar(email, senha) {
             document.getElementById('login-email').value = email;
             document.getElementById('login-password').value = senha;

@@ -19,15 +19,7 @@ if (!window.getClasseCondicao) {
 
 if (!window.db) {
     window.db = {
-        turmas: [
-            { id: 't1', nome: '6º Ano A', etapa: 'Ensino Fundamental Anos Finais', slug: '6-ano-a', config_mapa: { linhas: 5, colunas: 6 } },
-            { id: 't2', nome: '6º Ano B', etapa: 'Ensino Fundamental Anos Finais', slug: '6-ano-b', config_mapa: { linhas: 5, colunas: 6 } },
-            { id: 't3', nome: '7º Ano A', etapa: 'Ensino Fundamental Anos Finais', slug: '7-ano-a', config_mapa: { linhas: 5, colunas: 6 } },
-            { id: 't4', nome: '7º Ano B', etapa: 'Ensino Fundamental Anos Finais', slug: '7-ano-b', config_mapa: { linhas: 5, colunas: 6 } },
-            { id: 't5', nome: '8º Ano A', etapa: 'Ensino Fundamental Anos Finais', slug: '8-ano-a', config_mapa: { linhas: 5, colunas: 6 } },
-            { id: 't6', nome: '9º Ano A', etapa: 'Ensino Fundamental Anos Finais', slug: '9-ano-a', config_mapa: { linhas: 5, colunas: 6 } },
-            { id: 't7', nome: '1ª Série EM', etapa: 'Ensino Médio', slug: '1-serie-em', config_mapa: { linhas: 5, colunas: 6 } }
-        ],
+        turmas: [],
         alunos: [
             { id: "aluno_6a_1", nome: "Alice Bianchi de Paula Roccato", turma_id: "t1", condicao: "Nenhuma", avatar: "/assets/alunos/6anoa/Alice%20Bianchi%20de%20Paula%20Roccato.png" },
             { id: "aluno_6a_2", nome: "Alice Prudêncio Costa", turma_id: "t1", condicao: "Nenhuma", avatar: "/assets/alunos/6anoa/Alice%20Prud%C3%AAncio%20Costa.png" },
@@ -1772,63 +1764,12 @@ function renderizarComponentesCadastros() {
 }
 
 function carregarCadastros() {
-    // 1. Renderização Instantânea (0ms) com dados locais/cache
-    renderizarComponentesCadastros();
-
-    // 2. Sincronização em Segundo Plano (Non-Blocking)
-    const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;
-    if (sbClient && typeof sbClient.from === 'function') {
-        Promise.all([
-            sbClient.from('turmas').select('*'),
-            sbClient.from('alunos').select('*'),
-            sbClient.from('professores').select('*'),
-            sbClient.from('disciplinas').select('*'),
-            sbClient.from('usuarios_sistema').select('*'),
-            sbClient.from('professores_turmas_disciplinas').select('*')
-        ]).then(([resTurmas, resAlunos, resProfs, resDisc, resUsuarios, resPtd]) => {
-            let alterou = false;
-
-            if (resTurmas.data && resTurmas.data.length > 0) {
-                db.turmas = resTurmas.data;
-                window.safeSetLocalStorage('rodin_turmas', db.turmas);
-                alterou = true;
-            }
-            if (resAlunos.data && resAlunos.data.length > 0) {
-                db.alunos = resAlunos.data;
-                window.safeSetLocalStorage('rodin_alunos', db.alunos);
-                alterou = true;
-            }
-            if (resProfs.data && resProfs.data.length > 0) {
-                db.professores = resProfs.data;
-                if (window.FaceSecurity && typeof window.FaceSecurity.restaurarBiometriasLocais === 'function') {
-                    window.FaceSecurity.restaurarBiometriasLocais();
-                }
-                window.safeSetLocalStorage('rodin_professores', db.professores);
-                alterou = true;
-            }
-            if (resDisc.data && resDisc.data.length > 0) {
-                db.disciplinas = resDisc.data;
-                window.safeSetLocalStorage('rodin_disciplinas', db.disciplinas);
-                alterou = true;
-            }
-            if (resUsuarios.data && resUsuarios.data.length > 0) {
-                salvarListaUsuariosSistema(resUsuarios.data);
-                alterou = true;
-            }
-            if (resPtd.data && resPtd.data.length > 0) {
-                db.ptd = resPtd.data;
-                window.safeSetLocalStorage('rodin_ptd', db.ptd);
-                alterou = true;
-            }
-
-            if (alterou) {
-                renderizarComponentesCadastros();
-            }
-        }).catch(err => {
-            console.warn("Aviso ao carregar dados do Supabase na Central de Cadastros:", err);
-        });
+    if (typeof window.sincronizarBancoComSupabase === 'function') {
+        window.sincronizarBancoComSupabase();
     }
+    renderizarComponentesCadastros();
 }
+window.carregarCadastros = carregarCadastros;
 
 function renderizarCheckboxesTurmasPermitidas() {
     const container = document.getElementById('checkboxes-turmas-permitidas');
@@ -4698,3 +4639,470 @@ async function executarScanAutenticacaoDispositivo() {
 }
 
 document.addEventListener('DOMContentLoaded', inicializarApp);
+
+window.alternarSubAbaCadastros = function(subTabId) {
+    const tabs = ['alunos', 'professores', 'turmas', 'disciplinas', 'usuarios'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`btn-cad-tab-${t}`);
+        const panel = document.getElementById(`cad-subview-${t}`);
+        if (btn) {
+            if (t === subTabId) btn.classList.add('active');
+            else btn.classList.remove('active');
+        }
+        if (panel) {
+            panel.style.display = t === subTabId ? 'block' : 'none';
+        }
+    });
+
+    if (subTabId === 'usuarios') {
+        if (typeof renderizarListaUsuariosCadastradosPainel === 'function') renderizarListaUsuariosCadastradosPainel();
+        if (typeof renderizarCheckboxesTurmasPermitidas === 'function') renderizarCheckboxesTurmasPermitidas();
+    } else if (subTabId === 'disciplinas') {
+        if (typeof renderizarListaDisciplinasCadastradas === 'function') renderizarListaDisciplinasCadastradas();
+    } else if (subTabId === 'professores') {
+        if (typeof renderizarListaProfessoresCadastrados === 'function') renderizarListaProfessoresCadastrados();
+    } else if (subTabId === 'turmas') {
+        if (typeof renderizarListaTurmasCadastradas === 'function') renderizarListaTurmasCadastradas();
+    } else if (subTabId === 'alunos') {
+        if (typeof renderizarListaAlunosCadastrados === 'function') renderizarListaAlunosCadastrados();
+    }
+};
+
+// ==========================================
+// CENTRAL DE CADASTROS (TURMAS, ALUNOS, PROFESSORES, DISCIPLINAS)
+// ==========================================
+
+// 1. TURMAS
+async function cadastrarTurma(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    const anoEl = document.getElementById('cad-turma-ano');
+    const letraEl = document.getElementById('cad-turma-letra');
+
+    const ano = anoEl ? anoEl.value : '6º Ano';
+    const letra = letraEl ? letraEl.value : 'A';
+    const nomeTurma = letra === 'Única' ? ano : `${ano} ${letra}`;
+
+    if (!db.turmas) db.turmas = [];
+
+    const jaExiste = db.turmas.some(t => t.nome && t.nome.toLowerCase().trim() === nomeTurma.toLowerCase().trim());
+    if (jaExiste) {
+        if (typeof mostrarSnackbar === 'function') mostrarSnackbar(`⚠️ A turma '${nomeTurma}' já está cadastrada!`);
+        alert(`A turma '${nomeTurma}' já existe no sistema.`);
+        return false;
+    }
+
+    let etapa = "Ensino Médio";
+    if (['6º Ano', '7º Ano', '8º Ano', '9º Ano'].includes(ano)) {
+        etapa = "Ensino Fundamental Anos Finais";
+    }
+
+    const slug = nomeTurma.toLowerCase().trim()
+        .replace(/º/g, '')
+        .replace(/\s+/g, '-')
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+
+    const novaTurma = {
+        id: `turma_${Date.now()}`,
+        nome: nomeTurma,
+        ano: ano,
+        letra: letra,
+        etapa: etapa,
+        slug: slug,
+        config_mapa: { linhas: 5, colunas: 6 }
+    };
+
+    db.turmas.push(novaTurma);
+    window.safeSetLocalStorage('rodin_turmas', db.turmas);
+
+    const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;
+    if (sbClient && typeof sbClient.from === 'function') {
+        try {
+            await sbClient.from('turmas').insert([{
+                id: novaTurma.id,
+                nome: novaTurma.nome,
+                etapa: novaTurma.etapa,
+                slug: novaTurma.slug,
+                config_mapa: novaTurma.config_mapa
+            }]);
+        } catch(err) {
+            console.warn("Erro ao enviar turma ao Supabase:", err);
+        }
+    }
+
+    const formEl = document.getElementById('form-cad-turma');
+    if (formEl) formEl.reset();
+
+    renderizarListaTurmasCadastradas();
+    if (typeof renderizarComponentesCadastros === 'function') renderizarComponentesCadastros();
+    if (typeof mostrarSnackbar === 'function') mostrarSnackbar(`Turma '${nomeTurma}' cadastrada com sucesso!`);
+    return false;
+}
+window.cadastrarTurma = cadastrarTurma;
+
+function renderizarListaTurmasCadastradas() {
+    const container = document.getElementById('lista-turmas-cadastradas');
+    if (!container) return;
+
+    if (!db.turmas) db.turmas = [];
+    const turmasOrdenadas = window.ordenarTurmas ? window.ordenarTurmas(db.turmas) : db.turmas;
+
+    if (turmasOrdenadas.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--rodin-cool-gray); font-size:13px;">Nenhuma turma cadastrada.</div>`;
+        return;
+    }
+
+    container.innerHTML = turmasOrdenadas.map(t => {
+        const qtdAlunos = (db.alunos || []).filter(a => a.turma_id === t.id).length;
+        return `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#F8FAFC; padding:12px 16px; border-radius:12px; border:1px solid var(--rodin-line);">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:36px; height:36px; border-radius:10px; background:#FFF7ED; color:var(--rodin-orange); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; border:1px solid var(--rodin-orange);">
+                        <i class="ph-bold ph-users-three"></i>
+                    </div>
+                    <div>
+                        <strong style="font-size:14px; color:var(--rodin-graphite);">${t.nome}</strong>
+                        <div style="font-size:11px; color:var(--rodin-cool-gray); font-weight:600;">${t.etapa} • ${qtdAlunos} aluno(s)</div>
+                    </div>
+                </div>
+                <button class="btn-reset-pink" onclick="excluirTurma('${t.id}')" title="Excluir Turma" style="padding:6px 12px; font-size:11px;">
+                    <i class="ph-bold ph-trash"></i> Excluir
+                </button>
+            </div>
+        `;
+    }).join('');
+}
+window.renderizarListaTurmasCadastradas = renderizarListaTurmasCadastradas;
+
+async function excluirTurma(turmaId) {
+    if (!db.turmas) db.turmas = [];
+    if (db.turmas.length <= 1) {
+        if (typeof mostrarSnackbar === 'function') mostrarSnackbar("Não é possível excluir a única turma cadastrada!");
+        alert("Não é possível excluir a única turma cadastrada!");
+        return;
+    }
+    const turma = db.turmas.find(t => t.id === turmaId);
+    db.turmas = db.turmas.filter(t => t.id !== turmaId);
+    window.safeSetLocalStorage('rodin_turmas', db.turmas);
+
+    const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;
+    if (sbClient && typeof sbClient.from === 'function') {
+        try {
+            await sbClient.from('turmas').delete().eq('id', turmaId);
+        } catch(err) {
+            console.warn("Erro ao apagar turma no Supabase:", err);
+        }
+    }
+
+    renderizarListaTurmasCadastradas();
+    if (typeof renderizarComponentesCadastros === 'function') renderizarComponentesCadastros();
+    if (typeof mostrarSnackbar === 'function') mostrarSnackbar(`Turma '${turma ? turma.nome : ''}' excluída!`);
+}
+window.excluirTurma = excluirTurma;
+
+// 2. ALUNOS
+async function cadastrarAluno(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    const nomeEl = document.getElementById('cad-aluno-nome');
+    const turmaEl = document.getElementById('cad-aluno-turma');
+    const condicaoEl = document.getElementById('cad-aluno-condicao');
+
+    const nome = nomeEl ? nomeEl.value.trim() : '';
+    const turmaId = turmaEl ? turmaEl.value : '';
+    const condicao = condicaoEl ? condicaoEl.value : 'Nenhuma';
+
+    if (!nome || !turmaId) {
+        alert("Preencha o nome do aluno e escolha uma turma.");
+        return false;
+    }
+
+    if (!db.alunos) db.alunos = [];
+
+    const novoAluno = {
+        id: `aluno_${Date.now()}`,
+        nome: nome,
+        turma_id: turmaId,
+        condicao: condicao,
+        foto: window._fotoAlunoPreviewTemp || `https://ui-avatars.com/api/?name=${encodeURIComponent(nome)}&background=FF8A4C&color=fff`
+    };
+
+    db.alunos.push(novoAluno);
+    window.safeSetLocalStorage('rodin_alunos', db.alunos);
+    window._fotoAlunoPreviewTemp = null;
+
+    const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;
+    if (sbClient && typeof sbClient.from === 'function') {
+        try {
+            await sbClient.from('alunos').insert([{
+                id: novoAluno.id,
+                nome: novoAluno.nome,
+                turma_id: novoAluno.turma_id,
+                condicao: novoAluno.condicao,
+                foto: novoAluno.foto
+            }]);
+        } catch(err) {
+            console.warn("Erro ao cadastrar aluno no Supabase:", err);
+        }
+    }
+
+    const formEl = document.getElementById('form-cad-aluno');
+    if (formEl) formEl.reset();
+
+    renderizarListaAlunosCadastrados();
+    if (typeof mostrarSnackbar === 'function') mostrarSnackbar(`Aluno(a) '${nome}' matriculado(a) com sucesso!`);
+    return false;
+}
+window.cadastrarAluno = cadastrarAluno;
+
+function renderizarListaAlunosCadastrados() {
+    const container = document.getElementById('lista-alunos-cadastrados');
+    if (!container) return;
+
+    if (!db.alunos) db.alunos = [];
+    const filtroTurmaEl = document.getElementById('cad-filtro-turma');
+    const filtro = filtroTurmaEl ? filtroTurmaEl.value : 'todas';
+
+    let lista = db.alunos;
+    if (filtro && filtro !== 'todas') {
+        lista = lista.filter(a => a.turma_id === filtro);
+    }
+
+    if (lista.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--rodin-cool-gray); font-size:13px;">Nenhum aluno encontrado.</div>`;
+        return;
+    }
+
+    container.innerHTML = lista.map(a => {
+        const turma = (db.turmas || []).find(t => t.id === a.turma_id);
+        const nomeTurma = turma ? turma.nome : 'Sem Turma';
+        const foto = a.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(a.nome)}&background=FF8A4C&color=fff`;
+
+        return `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#F8FAFC; padding:10px 14px; border-radius:12px; border:1px solid var(--rodin-line);">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <img src="${foto}" style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid var(--rodin-orange);">
+                    <div>
+                        <strong style="font-size:13px; color:var(--rodin-graphite); display:block;">${a.nome}</strong>
+                        <div style="font-size:11px; color:var(--rodin-cool-gray); font-weight:600;">
+                            Turma: ${nomeTurma} ${a.condicao && a.condicao !== 'Nenhuma' ? `• <span style="color:#C2410C; font-weight:800;">${a.condicao}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+                <button class="btn-reset-pink" onclick="excluirAluno('${a.id}')" style="padding:6px 12px; font-size:11px;">
+                    <i class="ph-bold ph-trash"></i> Excluir
+                </button>
+            </div>
+        `;
+    }).join('');
+}
+window.renderizarListaAlunosCadastrados = renderizarListaAlunosCadastrados;
+
+async function excluirAluno(alunoId) {
+    if (!db.alunos) db.alunos = [];
+    const aluno = db.alunos.find(a => a.id === alunoId);
+    db.alunos = db.alunos.filter(a => a.id !== alunoId);
+    window.safeSetLocalStorage('rodin_alunos', db.alunos);
+
+    const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;
+    if (sbClient && typeof sbClient.from === 'function') {
+        try {
+            await sbClient.from('alunos').delete().eq('id', alunoId);
+        } catch(err){}
+    }
+
+    renderizarListaAlunosCadastrados();
+    if (typeof mostrarSnackbar === 'function') mostrarSnackbar(`Aluno '${aluno ? aluno.nome : ''}' excluído!`);
+}
+window.excluirAluno = excluirAluno;
+
+// 3. PROFESSORES
+async function cadastrarProfessor(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    const nomeEl = document.getElementById('cad-prof-nome');
+    const etapaEl = document.getElementById('cad-prof-etapa');
+    const discEl = document.getElementById('cad-prof-disciplina');
+
+    const nome = nomeEl ? nomeEl.value.trim() : '';
+    const etapa = etapaEl ? etapaEl.value : 'Ensino Fundamental Anos Finais';
+    const disciplina = discEl ? discEl.value : 'Matemática';
+
+    if (!nome) {
+        alert("Preencha o nome do professor.");
+        return false;
+    }
+
+    if (!db.professores) db.professores = [];
+
+    const novoProf = {
+        id: `prof_${Date.now()}`,
+        nome: nome,
+        etapa: etapa,
+        disciplina: disciplina,
+        foto: `https://ui-avatars.com/api/?name=${encodeURIComponent(nome)}&background=4F46E5&color=fff`
+    };
+
+    db.professores.push(novoProf);
+    window.safeSetLocalStorage('rodin_professores', db.professores);
+
+    const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;
+    if (sbClient && typeof sbClient.from === 'function') {
+        try {
+            await sbClient.from('professores').insert([{
+                id: novoProf.id,
+                nome: novoProf.nome,
+                etapa: novoProf.etapa,
+                disciplina: novoProf.disciplina
+            }]);
+        } catch(err){}
+    }
+
+    const formEl = document.getElementById('form-cad-professor');
+    if (formEl) formEl.reset();
+
+    renderizarListaProfessoresCadastrados();
+    if (typeof mostrarSnackbar === 'function') mostrarSnackbar(`Professor(a) '${nome}' cadastrado(a)!`);
+    return false;
+}
+window.cadastrarProfessor = cadastrarProfessor;
+
+function renderizarListaProfessoresCadastrados() {
+    const container = document.getElementById('lista-professores-cadastrados');
+    if (!container) return;
+
+    if (!db.professores) db.professores = [];
+
+    if (db.professores.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--rodin-cool-gray); font-size:13px;">Nenhum professor cadastrado.</div>`;
+        return;
+    }
+
+    container.innerHTML = db.professores.map(p => {
+        const foto = p.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.nome)}&background=4F46E5&color=fff`;
+        return `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#F8FAFC; padding:10px 14px; border-radius:12px; border:1px solid var(--rodin-line);">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <img src="${foto}" style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid #4F46E5;">
+                    <div>
+                        <strong style="font-size:13px; color:var(--rodin-graphite); display:block;">${p.nome}</strong>
+                        <div style="font-size:11px; color:var(--rodin-cool-gray); font-weight:600;">${p.disciplina || 'Geral'} • ${p.etapa || 'Todas as Etapas'}</div>
+                    </div>
+                </div>
+                <button class="btn-reset-pink" onclick="excluirProfessor('${p.id}')" style="padding:6px 12px; font-size:11px;">
+                    <i class="ph-bold ph-trash"></i> Excluir
+                </button>
+            </div>
+        `;
+    }).join('');
+}
+window.renderizarListaProfessoresCadastrados = renderizarListaProfessoresCadastrados;
+
+async function excluirProfessor(profId) {
+    if (!db.professores) db.professores = [];
+    const prof = db.professores.find(p => p.id === profId);
+    db.professores = db.professores.filter(p => p.id !== profId);
+    window.safeSetLocalStorage('rodin_professores', db.professores);
+
+    const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;
+    if (sbClient && typeof sbClient.from === 'function') {
+        try {
+            await sbClient.from('professores').delete().eq('id', profId);
+        } catch(err){}
+    }
+
+    renderizarListaProfessoresCadastrados();
+    if (typeof mostrarSnackbar === 'function') mostrarSnackbar(`Professor '${prof ? prof.nome : ''}' excluído!`);
+}
+window.excluirProfessor = excluirProfessor;
+
+// 4. DISCIPLINAS
+async function cadastrarDisciplina(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    const nomeEl = document.getElementById('cad-disc-nome');
+    const etapaEl = document.getElementById('cad-disc-etapa');
+
+    const nome = nomeEl ? nomeEl.value.trim() : '';
+    const etapa = etapaEl ? etapaEl.value : 'Todas as Etapas';
+
+    if (!nome) {
+        alert("Preencha o nome da disciplina.");
+        return false;
+    }
+
+    if (!db.disciplinas) db.disciplinas = [];
+
+    const novaDisc = {
+        id: `disc_${Date.now()}`,
+        nome: nome,
+        etapa: etapa
+    };
+
+    db.disciplinas.push(novaDisc);
+    window.safeSetLocalStorage('rodin_disciplinas', db.disciplinas);
+
+    const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;
+    if (sbClient && typeof sbClient.from === 'function') {
+        try {
+            await sbClient.from('disciplinas').insert([{
+                id: novaDisc.id,
+                nome: novaDisc.nome,
+                etapa: novaDisc.etapa
+            }]);
+        } catch(err){}
+    }
+
+    const formEl = document.getElementById('form-cad-disciplina');
+    if (formEl) formEl.reset();
+
+    renderizarListaDisciplinasCadastradas();
+    if (typeof mostrarSnackbar === 'function') mostrarSnackbar(`Disciplina '${nome}' cadastrada!`);
+    return false;
+}
+window.cadastrarDisciplina = cadastrarDisciplina;
+
+function renderizarListaDisciplinasCadastradas() {
+    const container = document.getElementById('lista-disciplinas-cadastradas');
+    if (!container) return;
+
+    if (!db.disciplinas) db.disciplinas = [];
+
+    if (db.disciplinas.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--rodin-cool-gray); font-size:13px;">Nenhuma disciplina cadastrada.</div>`;
+        return;
+    }
+
+    container.innerHTML = db.disciplinas.map(d => {
+        return `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#F8FAFC; padding:10px 14px; border-radius:12px; border:1px solid var(--rodin-line);">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <i class="ph-bold ph-book" style="color:var(--rodin-orange); font-size:20px;"></i>
+                    <div>
+                        <strong style="font-size:13px; color:var(--rodin-graphite); display:block;">${d.nome}</strong>
+                        <div style="font-size:11px; color:var(--rodin-cool-gray); font-weight:600;">${d.etapa}</div>
+                    </div>
+                </div>
+                <button class="btn-reset-pink" onclick="excluirDisciplina('${d.id}')" style="padding:6px 12px; font-size:11px;">
+                    <i class="ph-bold ph-trash"></i> Excluir
+                </button>
+            </div>
+        `;
+    }).join('');
+}
+window.renderizarListaDisciplinasCadastradas = renderizarListaDisciplinasCadastradas;
+
+async function excluirDisciplina(discId) {
+    if (!db.disciplinas) db.disciplinas = [];
+    const disc = db.disciplinas.find(d => d.id === discId);
+    db.disciplinas = db.disciplinas.filter(d => d.id !== discId);
+    window.safeSetLocalStorage('rodin_disciplinas', db.disciplinas);
+
+    const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;
+    if (sbClient && typeof sbClient.from === 'function') {
+        try {
+            await sbClient.from('disciplinas').delete().eq('id', discId);
+        } catch(err){}
+    }
+
+    renderizarListaDisciplinasCadastradas();
+    if (typeof mostrarSnackbar === 'function') mostrarSnackbar(`Disciplina '${disc ? disc.nome : ''}' excluída!`);
+}
+window.excluirDisciplina = excluirDisciplina;

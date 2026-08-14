@@ -11,31 +11,45 @@
 @import url('./visao-professor.css');
 @import url('./relatorio-diario.css');
 
-/* Regras de Fallback Globais */
+/* Regras de Layout Global */
 .app-layout {
-  display: flex;
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
-  background-color: #F8FAFC;
+  display: flex !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  overflow: hidden !important;
+  background-color: #F8FAFC !important;
 }
 
 .sidebar-secondary {
-  width: 265px;
-  min-width: 265px;
-  background-color: #FFFFFF;
-  border-right: 1px solid #E2E8F0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 20px 14px;
-  z-index: 100;
+  width: 265px !important;
+  min-width: 265px !important;
+  max-width: 265px !important;
+  background-color: #FFFFFF !important;
+  border-right: 1px solid #E2E8F0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  padding: 20px 14px !important;
+  z-index: 100 !important;
+  flex-shrink: 0 !important;
+  height: 100vh !important;
+  box-sizing: border-box !important;
+  overflow-y: auto !important;
+  transition: width 0.2s ease, min-width 0.2s ease, padding 0.2s ease !important;
+}
+
+.sidebar-secondary.collapsed {
+  width: 76px !important;
+  min-width: 76px !important;
+  max-width: 76px !important;
+  padding: 20px 8px !important;
 }
 
 .main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  overflow: hidden;
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  height: 100vh !important;
 }

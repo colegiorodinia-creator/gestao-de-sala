@@ -1,6 +1,6 @@
 // ==========================================
 // PORTAL RODIN - MÓDULO GLOBAL (global.js)
-// Inicialização do Banco, Autenticação, Usuários, Permissões e Utilitários Globais
+// Sincronização em Tempo Real com Supabase, Autenticação e Utilitários
 // ==========================================
 
 // Limpeza de sessão facilitada para testes (?clear=true)
@@ -10,19 +10,16 @@ if (window.location.search.includes('clear=true')) {
     window.location.href = window.location.pathname;
 }
 
-window.escapeHTML = function(str) {
-    if (str === null || str === undefined) return '';
-    return String(str).replace(/[&<>"']/g, function(match) {
-        const map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;'
-        };
-        return map[match];
-    });
+// Inicialização Global do Banco em Memória
+window.supabase = window.supabase || {};
+window.db = window.db || {
+    turmas: [],
+    alunos: [],
+    professores: [],
+    disciplinas: [],
+    usuarios_sistema: []
 };
+var db = window.db;
 
 window.supabaseUrl = 'https://vjnfkaenqrprtsiuqilb.supabase.co';
 window.supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqbmZrYWVucXJwcnRzaXVxaWxiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNjI4MTEsImV4cCI6MjEwMDkzODgxMX0.n0LW0qZXQhUaaHaXSy-3QPzoGVsS8SJc9-gDNcvzGhg';
@@ -48,7 +45,6 @@ window.safeSetLocalStorage = function(key, data) {
                     try {
                         const oldProfs = JSON.parse(oldRaw);
                         if (Array.isArray(oldProfs)) {
-                            // Mesclar biometrias antigas para os novos dados antes de salvar
                             const merged = rawData.map(p => {
                                 const oldP = oldProfs.find(op => op.id === p.id);
                                 if (oldP && (oldP.facial_descriptor || oldP.facial_descriptors)) {
@@ -64,26 +60,21 @@ window.safeSetLocalStorage = function(key, data) {
                             });
                             valueToSave = merged;
                         }
-                    } catch(e) {
-                        console.warn("Erro ao mesclar biometrias durante safeSetLocalStorage:", e);
-                    }
+                    } catch(e) {}
                 }
             }
+            valueToSave = JSON.stringify(rawData);
+        } else if (typeof data !== 'string') {
+            valueToSave = JSON.stringify(data);
         }
 
-        localStorage.setItem(key, typeof valueToSave === 'string' ? valueToSave : JSON.stringify(valueToSave));
-    } catch(e) {
-        console.warn(`[LocalStorage] Quota excedida ao salvar '${key}', mantido em memória/Supabase.`, e);
+        localStorage.setItem(key, valueToSave);
+    } catch (e) {
+        console.warn(`[Storage Warning] Erro ao salvar chave '${key}' no localStorage:`, e);
     }
 };
 
-window.getClasseCondicao = function(cond) {
-    if (!cond) return 'regular';
-    return String(cond).toLowerCase().trim()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .replace(/\s+/g, '_');
-};
-
+// 1. GESTÃO DO PERFIL DE USUÁRIO & PERMISSÕES
 window.obterPermissoesESenhaUsuario = function(usr) {
     if (!usr) return { turmas: 'todas', senha: '' };
     if (usr.turmas_permitidas && typeof usr.turmas_permitidas === 'object' && !Array.isArray(usr.turmas_permitidas)) {
@@ -107,37 +98,18 @@ window.empacotarPermissoesESenhaUsuario = function(turmas, senha) {
     }
     return turmas;
 };
-if (!window.db) {
-    window.db = {
-        turmas: [],
-        alunos: [],
-        disciplinas: [],
-        professores: [],
-        ptd: [],
-        mapa_slots: [],
-        grade_slots: [],
-        ocorrencias: [],
-        presencas: []
-    };
-}
-if (!window.estadoApp) {
-    window.estadoApp = {
-        abaAtiva: 'gestao',
-        subAbaAtiva: 'geral',
-        turmaSelecionada: null,
-        alunoSelecionadoModal: null,
-        motivoSelecionadoModal: null,
-        modoTablet: false
-    };
-}
 
-// 1. GESTÃO DO PERFIL DE USUÁRIO & PERMISSÕES DE TURMA
-function obterListaUsuariosSistema() {
+// Obter Lista de Usuários - Exclusivamente dados reais do Supabase/Cache Oficial
+window.obterListaUsuariosSistema = function() {
     try {
         const salvo = localStorage.getItem('rodin_usuarios_sistema');
-        if (salvo) return JSON.parse(salvo);
+        if (salvo) {
+            const parsed = JSON.parse(salvo);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
     } catch (e) {}
 
+    // Fallback mínimo estrito (Apenas os dois usuários reais cadastrados no Supabase)
     return [
         {
             id: 'usr_diretor',
@@ -156,73 +128,150 @@ function obterListaUsuariosSistema() {
             foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'
         }
     ];
-}
+};
+var obterListaUsuariosSistema = window.obterListaUsuariosSistema;
 
-function salvarListaUsuariosSistema(lista) {
-    localStorage.setItem('rodin_usuarios_sistema', JSON.stringify(lista));
-    if (db) db.usuarios_sistema = lista;
-}
+window.salvarListaUsuariosSistema = function(lista) {
+    window.safeSetLocalStorage('rodin_usuarios_sistema', lista);
+    if (window.db) window.db.usuarios_sistema = lista;
+};
+var salvarListaUsuariosSistema = window.salvarListaUsuariosSistema;
 
-function obterUsuarioLogado() {
+window.obterUsuarioLogado = function() {
     try {
         const sessao = localStorage.getItem('rodin_active_session');
-        if (sessao) return JSON.parse(sessao);
+        if (sessao) {
+            const parsed = JSON.parse(sessao);
+            if (parsed && parsed.nome) return parsed;
+        }
     } catch (e) {}
 
-    const usuarios = obterListaUsuariosSistema();
-    return usuarios[0];
-}
+    const usuarios = window.obterListaUsuariosSistema();
+    const defaultUser = usuarios[0]; // Benedito Donizete Bueno da Silva (Direção Geral)
+    try {
+        localStorage.setItem('rodin_active_session', JSON.stringify(defaultUser));
+        localStorage.setItem('rodin_usuario_logado_id', defaultUser.id);
+    } catch (e) {}
+    return defaultUser;
+};
+var obterUsuarioLogado = window.obterUsuarioLogado;
 
+// Carregamento Inicial do Banco Local a partir do Cache
+window.carregarBancoDeDadosLocal = function() {
+    try {
+        const t = localStorage.getItem('rodin_turmas');
+        const a = localStorage.getItem('rodin_alunos');
+        const p = localStorage.getItem('rodin_professores');
+        const d = localStorage.getItem('rodin_disciplinas');
+        const u = localStorage.getItem('rodin_usuarios_sistema');
+
+        if (t) window.db.turmas = JSON.parse(t);
+        if (a) window.db.alunos = JSON.parse(a);
+        if (p) window.db.professores = JSON.parse(p);
+        if (d) window.db.disciplinas = JSON.parse(d);
+        if (u) window.db.usuarios_sistema = JSON.parse(u);
+    } catch(err) {
+        console.warn("[Local DB Load Warning]:", err);
+    }
+};
+window.carregarBancoDeDadosLocal();
+
+// 2. SINCRONIZAÇÃO COMPLETA COM O SUPABASE (SEM GERAR DADOS FAKE)
+window.sincronizarBancoComSupabase = async function() {
+    const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;
+    if (!sbClient || typeof sbClient.from !== 'function') return;
+
+    try {
+        const [resTurmas, resAlunos, resProfs, resDisc, resUsuarios] = await Promise.all([
+            sbClient.from('turmas').select('*'),
+            sbClient.from('alunos').select('*'),
+            sbClient.from('professores').select('*'),
+            sbClient.from('disciplinas').select('*'),
+            sbClient.from('usuarios_sistema').select('*')
+        ]);
+
+        if (resTurmas && Array.isArray(resTurmas.data)) {
+            window.db.turmas = resTurmas.data;
+            window.safeSetLocalStorage('rodin_turmas', window.db.turmas);
+        }
+
+        if (resAlunos && Array.isArray(resAlunos.data)) {
+            // Mapear campos de avatar se necessário
+            window.db.alunos = resAlunos.data.map(al => ({
+                ...al,
+                foto: al.avatar || al.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(al.nome)}&background=FF8A4C&color=fff`
+            }));
+            window.safeSetLocalStorage('rodin_alunos', window.db.alunos);
+        }
+
+        if (resProfs && Array.isArray(resProfs.data)) {
+            window.db.professores = resProfs.data;
+            if (window.FaceSecurity && typeof window.FaceSecurity.restaurarBiometriasLocais === 'function') {
+                window.FaceSecurity.restaurarBiometriasLocais();
+            }
+            window.safeSetLocalStorage('rodin_professores', window.db.professores);
+        }
+
+        if (resDisc && Array.isArray(resDisc.data)) {
+            window.db.disciplinas = resDisc.data;
+            window.safeSetLocalStorage('rodin_disciplinas', window.db.disciplinas);
+        }
+
+        if (resUsuarios && Array.isArray(resUsuarios.data) && resUsuarios.data.length > 0) {
+            window.db.usuarios_sistema = resUsuarios.data;
+            window.salvarListaUsuariosSistema(window.db.usuarios_sistema);
+        }
+
+        // Disparar atualizações nas interfaces ativas
+        if (typeof window.renderizarListaUsuariosCadastradosPainel === 'function') window.renderizarListaUsuariosCadastradosPainel();
+        if (typeof window.renderizarCheckboxesTurmasPermitidas === 'function') window.renderizarCheckboxesTurmasPermitidas();
+        if (typeof window.renderizarListaTurmasCadastradas === 'function') window.renderizarListaTurmasCadastradas();
+        if (typeof window.renderizarListaAlunosCadastrados === 'function') window.renderizarListaAlunosCadastrados();
+        if (typeof window.renderizarListaProfessoresCadastrados === 'function') window.renderizarListaProfessoresCadastrados();
+        if (typeof window.renderizarListaDisciplinasCadastradas === 'function') window.renderizarListaDisciplinasCadastradas();
+        if (typeof window.renderizarComponentesCadastros === 'function') window.renderizarComponentesCadastros();
+        if (typeof window.renderizarInterface === 'function') window.renderizarInterface();
+
+        document.dispatchEvent(new CustomEvent('rodin_db_synced', { detail: window.db }));
+    } catch (err) {
+        console.warn("Aviso na sincronização do Supabase:", err);
+    }
+};
+
+// Executar sincronização inicial imediatamente
+window.sincronizarBancoComSupabase();
+
+// Autenticação e Troca de Usuário
 function verificarAutenticacaoRota() {
     const path = window.location.pathname;
     
-    // Permitir páginas de login e index sem autenticação inicial
     if (path.includes('login.html') || path.endsWith('index.html')) {
         return;
     }
     
-    // Se for o link amigável de visão do professor ou visao-professor.html
     const isVisaoProfessor = path.includes('visao-professor.html') || path.includes('/visao-professor-');
     if (isVisaoProfessor) {
         const sessao = localStorage.getItem('rodin_active_session');
         const salaAuth = sessionStorage.getItem('rodin_sala_auth') === 'true' || localStorage.getItem('rodin_sala_auth') === 'true';
-        
-        // Se tem qualquer uma das sessões válidas (Admin ou Monitoria), permite o acesso
-        if (sessao || salaAuth) {
-            return;
-        }
-        
-        // Caso contrário, não redirecionamos imediatamente, permitindo que a própria tela
-        // do professor exiba o overlay de login seguro de monitoria
+        if (sessao || salaAuth) return;
         return;
     }
     
-    // Para todas as outras rotas (cadastros, relatórios), exige a sessão administrativa normal
     const sessao = localStorage.getItem('rodin_active_session');
     if (!sessao) {
         window.location.href = 'login.html';
     }
 }
-
-async function fazerLogoutSistema() {
-    try {
-        if (window.sb && window.sb.auth) {
-            await window.sb.auth.signOut();
-        }
-    } catch(e){}
-    localStorage.removeItem('rodin_active_session');
-    window.location.href = 'login.html';
-}
-
 verificarAutenticacaoRota();
 
 function trocarUsuarioLogado(usuarioId) {
-    const usuarios = obterListaUsuariosSistema();
+    const usuarios = window.obterListaUsuariosSistema();
     const usr = usuarios.find(u => u.id === usuarioId);
     if (!usr) return;
 
     localStorage.setItem('rodin_active_session', JSON.stringify(usr));
-    db.perfil_usuario = usr;
+    localStorage.setItem('rodin_usuario_logado_id', usr.id);
+    if (window.db) window.db.perfil_usuario = usr;
 
     carregarPerfilUsuario();
     if (typeof mostrarSnackbar === 'function') {
@@ -233,13 +282,13 @@ function trocarUsuarioLogado(usuarioId) {
 
 function carregarPerfilUsuario() {
     const usr = obterUsuarioLogado();
-    db.perfil_usuario = usr;
+    if (window.db) window.db.perfil_usuario = usr;
 
     const elAvatar = document.getElementById('user-profile-avatar');
     const elNome = document.getElementById('user-profile-name');
     const elCargo = document.getElementById('user-profile-role');
 
-    if (elAvatar) elAvatar.src = usr.foto;
+    if (elAvatar) elAvatar.src = usr.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(usr.nome)}&background=FF8A4C&color=fff`;
     if (elNome) elNome.innerText = usr.nome;
     if (elCargo) elCargo.innerText = usr.cargo;
 }
@@ -247,39 +296,88 @@ function carregarPerfilUsuario() {
 function obterTurmasPermitidasUsuario() {
     const usr = obterUsuarioLogado();
     if (!usr || usr.papel === 'diretor' || usr.turmas_permitidas === 'todas') {
-        return db.turmas || [];
+        return window.db.turmas || [];
     }
 
     const permitidasList = Array.isArray(usr.turmas_permitidas) ? usr.turmas_permitidas : [];
-    return (db.turmas || []).filter(t => permitidasList.some(p => t.nome.toLowerCase().includes(p.toLowerCase())));
+    return (window.db.turmas || []).filter(t => permitidasList.some(p => t.nome.toLowerCase().includes(p.toLowerCase())));
 }
 
 window.getClasseCondicao = function(cond) {
     if (!cond) return 'regular';
-    return cond.toLowerCase().trim()
+    return String(cond).toLowerCase().trim()
         .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
         .replace(/\s+/g, '_');
 };
 function getClasseCondicao(cond) { return window.getClasseCondicao(cond); }
 
-// Toast Utilitário Global
-function mostrarSnackbar(mensagem) {
-    let snackbar = document.getElementById('rodin-toast-snackbar');
+window.mostrarSnackbar = function(mensagem, tipo = 'sucesso') {
+    let snackbar = document.getElementById('rodin-snackbar');
     if (!snackbar) {
         snackbar = document.createElement('div');
-        snackbar.id = 'rodin-toast-snackbar';
+        snackbar.id = 'rodin-snackbar';
+        snackbar.style.cssText = `
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #1E293B;
+            color: #FFFFFF;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 700;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            z-index: 999999;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(100px);
+            opacity: 0;
+            border-left: 4px solid var(--rodin-orange);
+        `;
         document.body.appendChild(snackbar);
     }
 
+    if (tipo === 'erro') {
+        snackbar.style.borderLeftColor = '#EF4444';
+    } else if (tipo === 'aviso') {
+        snackbar.style.borderLeftColor = '#F59E0B';
+    } else {
+        snackbar.style.borderLeftColor = 'var(--rodin-orange)';
+    }
+
     snackbar.innerHTML = `<i class="ph-bold ph-check-circle" style="color:var(--rodin-orange); font-size:18px;"></i> ${mensagem}`;
-    snackbar.classList.add('show');
+    snackbar.style.transform = 'translateY(0)';
+    snackbar.style.opacity = '1';
 
     setTimeout(() => {
-        snackbar.classList.remove('show');
+        snackbar.style.transform = 'translateY(100px)';
+        snackbar.style.opacity = '0';
     }, 3500);
-}
+};
 
-// Relógio Digital Global
+window.ordenarTurmas = function(listaTurmas) {
+    if (!Array.isArray(listaTurmas)) return [];
+    const ordemAnos = {
+        '6º Ano': 1,
+        '7º Ano': 2,
+        '8º Ano': 3,
+        '9º Ano': 4,
+        '1ª Série': 5,
+        '2ª Série': 6,
+        '3ª Série': 7,
+        'PPV': 8
+    };
+
+    return [...listaTurmas].sort((a, b) => {
+        const pesoA = ordemAnos[a.ano] || 99;
+        const pesoB = ordemAnos[b.ano] || 99;
+        if (pesoA !== pesoB) return pesoA - pesoB;
+        return (a.letra || '').localeCompare(b.letra || '');
+    });
+};
+
 function iniciarRelogio() {
     setInterval(() => {
         const agora = new Date();
@@ -289,9 +387,16 @@ function iniciarRelogio() {
     }, 1000);
 }
 
-// Função para escapar caracteres HTML e prevenir ataques XSS
+window.confirmarResetDados = function() {
+    if (confirm("Tem certeza que deseja resetar os dados locais para a base padrão do Supabase?")) {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.search = '?clear=true';
+    }
+};
+
 window.escapeHTML = function(str) {
-    if (typeof str !== 'string') return str;
+    if (typeof str !== 'string') return str || '';
     return str
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
@@ -299,4 +404,3 @@ window.escapeHTML = function(str) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
 };
-function escapeHTML(str) { return window.escapeHTML(str); }
