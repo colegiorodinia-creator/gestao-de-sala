@@ -4875,22 +4875,28 @@ function renderizarListaAlunosCadastrados() {
     container.innerHTML = lista.map(a => {
         const turma = (db.turmas || []).find(t => t.id === a.turma_id);
         const nomeTurma = turma ? turma.nome : 'Sem Turma';
-        const foto = a.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(a.nome)}&background=FF8A4C&color=fff`;
+        const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(a.nome)}&background=FF8A4C&color=fff`;
+        const foto = a.avatar || a.foto || fallbackAvatar;
 
         return `
-            <div style="display:flex; justify-content:space-between; align-items:center; background:#F8FAFC; padding:10px 14px; border-radius:12px; border:1px solid var(--rodin-line);">
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <img src="${foto}" style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid var(--rodin-orange);">
-                    <div>
-                        <strong style="font-size:13px; color:var(--rodin-graphite); display:block;">${a.nome}</strong>
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#F8FAFC; padding:12px 14px; border-radius:14px; border:1px solid var(--rodin-line); gap:12px;">
+                <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+                    <img src="${foto}" onerror="this.onerror=null; this.src='${fallbackAvatar}';" style="width:42px; height:42px; border-radius:50%; object-fit:cover; border:2px solid var(--rodin-orange); flex-shrink:0;">
+                    <div style="min-width:0;">
+                        <strong style="font-size:13px; color:var(--rodin-graphite); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${a.nome}</strong>
                         <div style="font-size:11px; color:var(--rodin-cool-gray); font-weight:600;">
                             Turma: ${nomeTurma} ${a.condicao && a.condicao !== 'Nenhuma' ? `• <span style="color:#C2410C; font-weight:800;">${a.condicao}</span>` : ''}
                         </div>
                     </div>
                 </div>
-                <button class="btn-reset-pink" onclick="excluirAluno('${a.id}')" style="padding:6px 12px; font-size:11px;">
-                    <i class="ph-bold ph-trash"></i> Excluir
-                </button>
+                <div style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
+                    <button type="button" class="btn-primary-rodin" onclick="window.abrirModalEditarAluno('${a.id}')" title="Editar Aluno" style="background:#475569; color:#FFF; font-size:11px; padding:6px 12px; border-radius:8px; gap:4px; cursor:pointer;">
+                        <i class="ph-bold ph-pencil-line"></i> Editar
+                    </button>
+                    <button type="button" class="btn-reset-pink" onclick="window.excluirAluno('${a.id}')" title="Excluir Aluno" style="padding:6px 10px; font-size:11px; cursor:pointer;">
+                        <i class="ph-bold ph-trash"></i>
+                    </button>
+                </div>
             </div>
         `;
     }).join('');

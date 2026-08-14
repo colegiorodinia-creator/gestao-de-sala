@@ -802,22 +802,125 @@
                 const foto = rawFoto || fallbackAvatar;
 
                 return `
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:#F8FAFC; padding:10px 14px; border-radius:12px; border:1px solid var(--rodin-line);">
-                        <div style="display:flex; align-items:center; gap:12px;">
-                            <img src="${foto}" onerror="this.onerror=null; this.src='${fallbackAvatar}';" style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid var(--rodin-orange);">
-                            <div>
-                                <strong style="font-size:13px; color:var(--rodin-graphite); display:block;">${a.nome}</strong>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:#F8FAFC; padding:12px 14px; border-radius:14px; border:1px solid var(--rodin-line); gap:12px;">
+                        <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+                            <img src="${foto}" onerror="this.onerror=null; this.src='${fallbackAvatar}';" style="width:42px; height:42px; border-radius:50%; object-fit:cover; border:2px solid var(--rodin-orange); flex-shrink:0;">
+                            <div style="min-width:0;">
+                                <strong style="font-size:13px; color:var(--rodin-graphite); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${a.nome}</strong>
                                 <div style="font-size:11px; color:var(--rodin-cool-gray); font-weight:600;">
                                     Turma: ${nomeTurma} ${a.condicao && a.condicao !== 'Nenhuma' ? `• <span style="color:#C2410C; font-weight:800;">${a.condicao}</span>` : ''}
                                 </div>
                             </div>
                         </div>
-                        <button class="btn-reset-pink" onclick="window.excluirAluno('${a.id}')" style="padding:6px 12px; font-size:11px; cursor:pointer;">
-                            <i class="ph-bold ph-trash"></i> Excluir
-                        </button>
+                        <div style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
+                            <button type="button" class="btn-primary-rodin" onclick="window.abrirModalEditarAluno('${a.id}')" title="Editar Aluno" style="background:#475569; color:#FFF; font-size:11px; padding:6px 12px; border-radius:8px; gap:4px; cursor:pointer;">
+                                <i class="ph-bold ph-pencil-line"></i> Editar
+                            </button>
+                            <button type="button" class="btn-reset-pink" onclick="window.excluirAluno('${a.id}')" title="Excluir Aluno" style="padding:6px 10px; font-size:11px; cursor:pointer;">
+                                <i class="ph-bold ph-trash"></i>
+                            </button>
+                        </div>
                     </div>
                 `;
             }).join('');
+        };
+
+        window.abrirModalEditarAluno = function(alunoId) {
+            const alunos = (window.db && window.db.alunos) ? window.db.alunos : [];
+            const aluno = alunos.find(a => a.id === alunoId);
+            if (!aluno) return;
+
+            const modal = document.getElementById('modal-editar-aluno');
+            if (!modal) return;
+
+            document.getElementById('edit-aluno-id').value = aluno.id;
+            document.getElementById('edit-aluno-nome').value = aluno.nome;
+            
+            const selTurma = document.getElementById('edit-aluno-turma');
+            if (selTurma) {
+                const turmas = (window.db && window.db.turmas) ? window.db.turmas : [];
+                const turmasOrdenadas = window.ordenarTurmas ? window.ordenarTurmas(turmas) : turmas;
+                selTurma.innerHTML = turmasOrdenadas.map(t => `<option value="${t.id}">${t.nome}</option>`).join('');
+                selTurma.value = aluno.turma_id || '';
+            }
+
+            const selCond = document.getElementById('edit-aluno-condicao');
+            if (selCond) {
+                selCond.value = aluno.condicao || 'Nenhuma';
+            }
+
+            const preview = document.getElementById('edit-aluno-avatar-preview');
+            if (preview) {
+                preview.src = aluno.avatar || aluno.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(aluno.nome)}&background=FF8A4C&color=fff`;
+            }
+
+            window._fotoAlunoEditFileTemp = null;
+            window._fotoAlunoEditPreviewTemp = null;
+
+            modal.style.display = 'flex';
+        };
+
+        window.fecharModalEditarAluno = function() {
+            const modal = document.getElementById('modal-editar-aluno');
+            if (modal) modal.style.display = 'none';
+        };
+
+        window.salvarEdicaoAluno = async function(e) {
+            if (e && typeof e.preventDefault === 'function') e.preventDefault();
+            const alunoId = document.getElementById('edit-aluno-id')?.value;
+            const nome = document.getElementById('edit-aluno-nome')?.value.trim();
+            const turmaId = document.getElementById('edit-aluno-turma')?.value;
+            const condicao = document.getElementById('edit-aluno-condicao')?.value || 'Nenhuma';
+
+            if (!nome || !turmaId) {
+                alert("Preencha o nome do aluno e selecione a turma.");
+                return false;
+            }
+
+            const alunos = window.db?.alunos || [];
+            const index = alunos.findIndex(a => a.id === alunoId);
+            if (index === -1) return false;
+
+            let fotoFinal = alunos[index].avatar || alunos[index].foto;
+
+            if (window._fotoAlunoEditFileTemp && typeof window.fazerUploadFotoSupabaseStorage === 'function') {
+                const storageUrl = await window.fazerUploadFotoSupabaseStorage(window._fotoAlunoEditFileTemp, '6anoa');
+                if (storageUrl) fotoFinal = storageUrl;
+            } else if (window._fotoAlunoEditPreviewTemp) {
+                fotoFinal = window._fotoAlunoEditPreviewTemp;
+            }
+
+            alunos[index].nome = nome;
+            alunos[index].turma_id = turmaId;
+            alunos[index].condicao = condicao;
+            alunos[index].avatar = fotoFinal;
+            alunos[index].foto = fotoFinal;
+
+            if (typeof window.safeSetLocalStorage === 'function') {
+                window.safeSetLocalStorage('rodin_alunos', alunos);
+            } else {
+                localStorage.setItem('rodin_alunos', JSON.stringify(alunos));
+            }
+
+            const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;
+            if (sbClient && typeof sbClient.from === 'function') {
+                try {
+                    await sbClient.from('alunos').update({
+                        nome: nome,
+                        turma_id: turmaId,
+                        condicao: condicao,
+                        avatar: fotoFinal,
+                        foto: fotoFinal
+                    }).eq('id', alunoId);
+                } catch(err) {
+                    console.warn("Erro ao salvar aluno no Supabase:", err);
+                }
+            }
+
+            window.fecharModalEditarAluno();
+            window.renderizarListaAlunosCadastrados();
+            if (typeof mostrarSnackbar === 'function') mostrarSnackbar(`Aluno(a) '${nome}' atualizado(a) com sucesso!`);
+            return false;
         };
 
         window.excluirAluno = function(alunoId) {
@@ -1351,7 +1454,6 @@
                                             <h3 style="font-size: 15px; color:var(--rodin-graphite); font-weight:800;">Alunos Matriculados</h3>
                                             <div style="display:flex; gap:8px; align-items:center;">
                                                 <select id="cad-filtro-turma" class="form-select" onchange="renderizarListaAlunosCadastrados()" style="width:auto; padding:6px 12px; font-size:12px;"></select>
-                                                <button class="btn-reset-pink" onclick="confirmarResetDados()">Resetar Dados</button>
                                             </div>
                                         </div>
                                         <div id="lista-alunos-cadastrados" style="display:flex; flex-direction:column; gap:10px; max-height:480px; overflow-y:auto;"></div>
