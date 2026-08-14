@@ -164,16 +164,20 @@ window.carregarBancoDeDadosLocal = function() {
         const p = localStorage.getItem('rodin_professores');
         const d = localStorage.getItem('rodin_disciplinas');
         const u = localStorage.getItem('rodin_usuarios_sistema');
+        const o = localStorage.getItem('rodin_ocorrencias');
 
         if (t) window.db.turmas = JSON.parse(t);
         if (a) window.db.alunos = JSON.parse(a);
         if (p) window.db.professores = JSON.parse(p);
         if (d) window.db.disciplinas = JSON.parse(d);
         if (u) window.db.usuarios_sistema = JSON.parse(u);
+        if (o) window.db.ocorrencias = JSON.parse(o);
+        else if (!window.db.ocorrencias) window.db.ocorrencias = [];
     } catch(err) {
         console.warn("[Local DB Load Warning]:", err);
     }
 };
+if (!window.db.ocorrencias) window.db.ocorrencias = [];
 window.carregarBancoDeDadosLocal();
 
 // 2. SINCRONIZAÇÃO COMPLETA COM O SUPABASE (SEM GERAR DADOS FAKE)
