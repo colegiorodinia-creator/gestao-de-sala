@@ -231,6 +231,10 @@ window.sincronizarBancoComSupabase = async function() {
                 window.FaceSecurity.restaurarBiometriasLocais();
             }
             window.safeSetLocalStorage('rodin_professores', window.db.professores);
+            // Sincronizar biometrias do Supabase Storage
+            if (typeof window.sincronizarBiometriaProfessoresSupabase === 'function') {
+                window.sincronizarBiometriaProfessoresSupabase().catch(()=>{});
+            }
         }
 
         if (resDisc && Array.isArray(resDisc.data)) {
@@ -256,6 +260,139 @@ window.sincronizarBancoComSupabase = async function() {
         document.dispatchEvent(new CustomEvent('rodin_db_synced', { detail: window.db }));
     } catch (err) {
         console.warn("Aviso na sincronização do Supabase:", err);
+    }
+};
+
+// 2.1 SALVAMENTO E SINCRONIZAÇÃO DE BIOMETRIA FACIAL NO SUPABASE (STORAGE + DATABASE)
+window.salvarBiometriaProfessorSupabase = async function(profId, resultado) {
+    if (!profId || !resultado || !resultado.descriptors || resultado.descriptors.length === 0) return false;
+
+    const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;
+    const descPrincipal = resultado.descriptors[0];
+    const todosDescritores = resultado.descriptors;
+    const fotoFrente = resultado.fotos?.frente || null;
+
+    // 1. Atualizar no estado em memória
+    if (!window.db) window.db = { professores: [] };
+    if (!window.db.professores) window.db.professores = [];
+    const profIndex = window.db.professores.findIndex(p => p.id === profId);
+    let profNome = 'Docente';
+    if (profIndex !== -1) {
+        window.db.professores[profIndex].facial_descriptor = descPrincipal;
+        window.db.professores[profIndex].facial_descriptors = todosDescritores;
+        window.db.professores[profIndex].biometria_facial_status = true;
+        if (fotoFrente) window.db.professores[profIndex].foto = fotoFrente;
+        profNome = window.db.professores[profIndex].nome;
+    }
+
+    // 2. Salvar no cache local
+    if (typeof window.safeSetLocalStorage === 'function') {
+        window.safeSetLocalStorage('rodin_professores', window.db.professores);
+    } else {
+        localStorage.setItem('rodin_professores', JSON.stringify(window.db.professores));
+    }
+
+    // 3. Atualizar no Supabase Database (tabela professores)
+    if (sbClient && typeof sbClient.from === 'function') {
+        try {
+            await sbClient.from('professores').update({
+                biometria_facial_status: true
+            }).eq('id', profId);
+        } catch (err) {
+            console.warn("Aviso ao atualizar status de biometria no banco:", err);
+        }
+    }
+
+    // 4. Salvar os descritores no Supabase Storage (bucket biometria-docentes)
+    try {
+        const urlStorage = 'https://vjnfkaenqrprtsiuqilb.supabase.co/storage/v1/object';
+        const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqbmZrYWVucXJwcnRzaXVxaWxiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTM2MjgxMSwiZXhwIjoyMTAwOTM4ODExfQ.BAI8Mf8Kyb6sSyg853UTC-2SanIhB5BTuIxOWNGkpZ4';
+        
+        let mapaDescritores = {};
+        try {
+            const respMapa = await fetch('https://vjnfkaenqrprtsiuqilb.supabase.co/storage/v1/object/public/biometria-docentes/descritores_faciais.json?t=' + Date.now());
+            if (respMapa.ok) {
+                mapaDescritores = await respMapa.json();
+            }
+        } catch(e){}
+
+        mapaDescritores[profId] = {
+            prof_id: profId,
+            nome: profNome,
+            descriptor: descPrincipal,
+            descriptors: todosDescritores,
+            foto: fotoFrente,
+            updated_at: new Date().toISOString()
+        };
+
+        // Salvar mapa central
+        await fetch(`${urlStorage}/biometria-docentes/descritores_faciais.json`, {
+            method: 'POST',
+            headers: {
+                'apikey': apiKey,
+                'Authorization': 'Bearer ' + apiKey,
+                'Content-Type': 'application/json',
+                'x-upsert': 'true'
+            },
+            body: JSON.stringify(mapaDescritores)
+        });
+
+        // Salvar arquivo individual
+        await fetch(`${urlStorage}/biometria-docentes/prof_${profId}.json`, {
+            method: 'POST',
+            headers: {
+                'apikey': apiKey,
+                'Authorization': 'Bearer ' + apiKey,
+                'Content-Type': 'application/json',
+                'x-upsert': 'true'
+            },
+            body: JSON.stringify(mapaDescritores[profId])
+        });
+
+        console.log(`✅ Biometria facial do Prof. ${profNome} salva com sucesso no Supabase!`);
+        return true;
+    } catch(err) {
+        console.error("Erro ao salvar biometria no Supabase Storage:", err);
+        return false;
+    }
+};
+
+window.sincronizarBiometriaProfessoresSupabase = async function() {
+    try {
+        const resp = await fetch('https://vjnfkaenqrprtsiuqilb.supabase.co/storage/v1/object/public/biometria-docentes/descritores_faciais.json?t=' + Date.now());
+        if (!resp.ok) return;
+
+        const mapaDescritores = await resp.json();
+        if (!mapaDescritores || typeof mapaDescritores !== 'object') return;
+
+        if (!window.db) window.db = { professores: [] };
+        if (!window.db.professores) window.db.professores = [];
+
+        let atualizouAlgum = false;
+        for (const prof of window.db.professores) {
+            if (mapaDescritores[prof.id]) {
+                prof.facial_descriptor = mapaDescritores[prof.id].descriptor;
+                prof.facial_descriptors = mapaDescritores[prof.id].descriptors || [mapaDescritores[prof.id].descriptor];
+                prof.biometria_facial_status = true;
+                if (mapaDescritores[prof.id].foto && !prof.foto) {
+                    prof.foto = mapaDescritores[prof.id].foto;
+                }
+                atualizouAlgum = true;
+            }
+        }
+
+        if (atualizouAlgum) {
+            if (typeof window.safeSetLocalStorage === 'function') {
+                window.safeSetLocalStorage('rodin_professores', window.db.professores);
+            } else {
+                localStorage.setItem('rodin_professores', JSON.stringify(window.db.professores));
+            }
+            if (typeof window.renderizarListaProfessoresCadastrados === 'function') {
+                window.renderizarListaProfessoresCadastrados();
+            }
+        }
+    } catch(err) {
+        console.warn("Aviso ao sincronizar biometrias do Supabase:", err);
     }
 };
 

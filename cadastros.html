@@ -973,7 +973,7 @@
             }
         };
 
-        window.cadastrarProfessor = function(e) {
+        window.cadastrarProfessor = async function(e) {
             if (e && typeof e.preventDefault === 'function') e.preventDefault();
             const nomeEl = document.getElementById('cad-prof-nome');
             const etapaEl = document.getElementById('cad-prof-etapa');
@@ -1015,17 +1015,25 @@
             const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;
             if (sbClient && typeof sbClient.from === 'function') {
                 try {
-                    sbClient.from('professores').insert([{
+                    await sbClient.from('professores').insert([{
                         id: novoProf.id,
                         nome: novoProf.nome,
                         etapa: novoProf.etapa,
-                        disciplina: novoProf.disciplina,
-                        foto: novoProf.foto,
-                        facial_descriptor: novoProf.facial_descriptor,
-                        facial_descriptors: novoProf.facial_descriptors,
-                        biometria_facial_status: novoProf.biometria_facial_status
-                    }]).then(()=>{}).catch(()=>{});
-                } catch(err){}
+                        biometria_facial_status: !!novoProf.facial_descriptor
+                    }]);
+                } catch(err){
+                    console.warn("Aviso ao inserir professor no Supabase:", err);
+                }
+            }
+
+            // Se escaneou a face no cadastro, salva os descritores no Supabase Storage
+            if (novoProf.facial_descriptor && typeof window.salvarBiometriaProfessorSupabase === 'function') {
+                try {
+                    await window.salvarBiometriaProfessorSupabase(novoProf.id, {
+                        descriptors: novoProf.facial_descriptors || [novoProf.facial_descriptor],
+                        fotos: { frente: novoProf.foto }
+                    });
+                } catch(e){}
             }
 
             // Limpar temporários
@@ -1160,32 +1168,18 @@
                     if (index !== -1) {
                         professores[index].facial_descriptor = resultado.descriptors[0];
                         professores[index].facial_descriptors = resultado.descriptors;
-                        professores[index].biometria_facial_status = 'cadastrada';
+                        professores[index].biometria_facial_status = true;
                         if (resultado.fotos?.frente) {
                             professores[index].foto = resultado.fotos.frente;
                         }
 
-                        if (typeof window.safeSetLocalStorage === 'function') {
-                            window.safeSetLocalStorage('rodin_professores', professores);
-                        } else {
-                            localStorage.setItem('rodin_professores', JSON.stringify(professores));
-                        }
-
-                        // Salvar no Supabase
-                        const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;
-                        if (sbClient && typeof sbClient.from === 'function') {
-                            try {
-                                await sbClient.from('professores').update({
-                                    facial_descriptor: resultado.descriptors[0],
-                                    facial_descriptors: resultado.descriptors,
-                                    biometria_facial_status: 'cadastrada',
-                                    foto: professores[index].foto
-                                }).eq('id', profId);
-                            } catch(err){}
+                        // Salvar no Supabase (Storage + Database)
+                        if (typeof window.salvarBiometriaProfessorSupabase === 'function') {
+                            await window.salvarBiometriaProfessorSupabase(profId, resultado);
                         }
 
                         if (typeof mostrarSnackbar === 'function') {
-                            mostrarSnackbar(`Biometria facial de ${professores[index].nome} cadastrada com sucesso!`);
+                            mostrarSnackbar(`Biometria facial de ${professores[index].nome} salva no Supabase com sucesso!`);
                         }
                         window.fecharModalCadastroFacial();
                         window.renderizarListaProfessoresCadastrados();
