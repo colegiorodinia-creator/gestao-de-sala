@@ -131,11 +131,28 @@ window.obterListaUsuariosSistema = function() {
 };
 var obterListaUsuariosSistema = window.obterListaUsuariosSistema;
 
-window.salvarListaUsuariosSistema = function(lista) {
-    window.safeSetLocalStorage('rodin_usuarios_sistema', lista);
-    if (window.db) window.db.usuarios_sistema = lista;
+window.obterPermissoesESenhaUsuario = function(usuario) {
+    if (!usuario) return { turmas: 'todas', senha: '' };
+    if (typeof usuario.turmas_permitidas === 'string') {
+        try {
+            const parsed = JSON.parse(usuario.turmas_permitidas);
+            if (typeof parsed === 'object' && parsed !== null && (parsed.turmas || parsed.senha)) {
+                return { turmas: parsed.turmas || 'todas', senha: parsed.senha || '' };
+            }
+        } catch(e){}
+        return { turmas: usuario.turmas_permitidas, senha: '' };
+    } else if (Array.isArray(usuario.turmas_permitidas)) {
+        return { turmas: usuario.turmas_permitidas, senha: '' };
+    }
+    return { turmas: 'todas', senha: '' };
 };
-var salvarListaUsuariosSistema = window.salvarListaUsuariosSistema;
+var obterPermissoesESenhaUsuario = window.obterPermissoesESenhaUsuario;
+
+window.empacotarPermissoesESenhaUsuario = function(turmas, senha) {
+    if (!senha) return turmas;
+    return JSON.stringify({ turmas: turmas, senha: senha });
+};
+var empacotarPermissoesESenhaUsuario = window.empacotarPermissoesESenhaUsuario;
 
 window.obterUsuarioLogado = function() {
     try {
