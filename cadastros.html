@@ -843,6 +843,33 @@
         };
 
         // 3. PROFESSORES
+        window._novoProfBiometriaTemp = null;
+        window._novoProfDescriptorsTemp = null;
+        window._novoProfFotoTemp = null;
+
+        window.abrirModalScanNovoProfessor = async function() {
+            window._profCadastroFacialId = 'NOVO_PROFESSOR';
+            const modal = document.getElementById('modal-cadastro-facial');
+            const nomeEl = document.getElementById('cad-facial-prof-nome');
+            const nomeInput = document.getElementById('cad-prof-nome')?.value.trim() || 'Novo Professor';
+            if (nomeEl) nomeEl.innerText = nomeInput;
+            if (modal) modal.style.display = 'flex';
+
+            const videoEl = document.getElementById('video-cad-facial');
+            const statusEl = document.getElementById('cad-facial-status-msg');
+            if (statusEl) statusEl.innerText = "Iniciando câmera e motor biométrico...";
+
+            if (window.FaceSecurity) {
+                await window.FaceSecurity.initModels();
+                const ok = await window.FaceSecurity.startCamera(videoEl);
+                if (ok) {
+                    if (statusEl) statusEl.innerText = "Posicione o rosto no centro da moldura e clique em 'Capturar Biometria'.";
+                } else {
+                    if (statusEl) statusEl.innerText = "Câmera indisponível. Verifique as permissões do navegador.";
+                }
+            }
+        };
+
         window.cadastrarProfessor = function(e) {
             if (e && typeof e.preventDefault === 'function') e.preventDefault();
             const nomeEl = document.getElementById('cad-prof-nome');
@@ -861,12 +888,18 @@
             if (!window.db) window.db = { turmas: [], alunos: [], professores: [], disciplinas: [], usuarios_sistema: [] };
             if (!window.db.professores) window.db.professores = [];
 
+            const temBiometria = window._novoProfBiometriaTemp ? true : false;
+            const fotoFinal = window._novoProfFotoTemp || `https://ui-avatars.com/api/?name=${encodeURIComponent(nome)}&background=4F46E5&color=fff`;
+
             const novoProf = {
                 id: `prof_${Date.now()}`,
                 nome: nome,
                 etapa: etapa,
                 disciplina: disciplina,
-                foto: `https://ui-avatars.com/api/?name=${encodeURIComponent(nome)}&background=4F46E5&color=fff`
+                foto: fotoFinal,
+                facial_descriptor: window._novoProfBiometriaTemp || null,
+                facial_descriptors: window._novoProfDescriptorsTemp || (window._novoProfBiometriaTemp ? [window._novoProfBiometriaTemp] : null),
+                biometria_facial_status: temBiometria ? 'cadastrada' : 'pendente'
             };
 
             window.db.professores.push(novoProf);
@@ -883,16 +916,27 @@
                         id: novoProf.id,
                         nome: novoProf.nome,
                         etapa: novoProf.etapa,
-                        disciplina: novoProf.disciplina
+                        disciplina: novoProf.disciplina,
+                        foto: novoProf.foto,
+                        facial_descriptor: novoProf.facial_descriptor,
+                        facial_descriptors: novoProf.facial_descriptors,
+                        biometria_facial_status: novoProf.biometria_facial_status
                     }]).then(()=>{}).catch(()=>{});
                 } catch(err){}
             }
+
+            // Limpar temporários
+            window._novoProfBiometriaTemp = null;
+            window._novoProfDescriptorsTemp = null;
+            window._novoProfFotoTemp = null;
+            const badgeEl = document.getElementById('badge-novo-prof-facial');
+            if (badgeEl) badgeEl.innerHTML = `<span style="font-size:11px; color:var(--rodin-cool-gray);">Nenhuma face escaneada ainda (opcional)</span>`;
 
             const formEl = document.getElementById('form-cad-professor');
             if (formEl) formEl.reset();
 
             window.renderizarListaProfessoresCadastrados();
-            if (typeof mostrarSnackbar === 'function') mostrarSnackbar(`Professor(a) '${nome}' cadastrado(a)!`);
+            if (typeof mostrarSnackbar === 'function') mostrarSnackbar(`Professor(a) '${nome}' cadastrado(a) com sucesso!`);
             return false;
         };
 
@@ -991,12 +1035,32 @@
                 });
 
                 if (resultado && resultado.descriptors && resultado.descriptors.length > 0) {
+                    if (profId === 'NOVO_PROFESSOR') {
+                        window._novoProfBiometriaTemp = resultado.descriptors[0];
+                        window._novoProfDescriptorsTemp = resultado.descriptors;
+                        window._novoProfFotoTemp = resultado.fotos?.frente || null;
+
+                        const badgeEl = document.getElementById('badge-novo-prof-facial');
+                        if (badgeEl) {
+                            badgeEl.innerHTML = `<span style="display:inline-flex; align-items:center; gap:6px; color:#059669; font-weight:800; font-size:12px; background:#ECFDF5; padding:6px 12px; border-radius:8px; border:1px solid #A7F3D0;"><i class="ph-bold ph-check-circle"></i> Biometria Facial Capturada!</span>`;
+                        }
+                        if (typeof mostrarSnackbar === 'function') {
+                            mostrarSnackbar("Biometria facial capturada para o novo docente!");
+                        }
+                        window.fecharModalCadastroFacial();
+                        return;
+                    }
+
+                    // Se for professor já existente
                     const professores = window.db?.professores || [];
                     const index = professores.findIndex(p => p.id === profId);
                     if (index !== -1) {
                         professores[index].facial_descriptor = resultado.descriptors[0];
                         professores[index].facial_descriptors = resultado.descriptors;
                         professores[index].biometria_facial_status = 'cadastrada';
+                        if (resultado.fotos?.frente) {
+                            professores[index].foto = resultado.fotos.frente;
+                        }
 
                         if (typeof window.safeSetLocalStorage === 'function') {
                             window.safeSetLocalStorage('rodin_professores', professores);
@@ -1011,7 +1075,8 @@
                                 await sbClient.from('professores').update({
                                     facial_descriptor: resultado.descriptors[0],
                                     facial_descriptors: resultado.descriptors,
-                                    biometria_facial_status: 'cadastrada'
+                                    biometria_facial_status: 'cadastrada',
+                                    foto: professores[index].foto
                                 }).eq('id', profId);
                             } catch(err){}
                         }
@@ -1316,6 +1381,22 @@
                                                 <label class="form-label">Disciplina Principal</label>
                                                 <select id="cad-prof-disciplina" class="form-select" required></select>
                                             </div>
+                                            
+                                            <div class="form-group" style="margin-top:14px; margin-bottom:16px;">
+                                                <label class="form-label" style="display:flex; justify-content:space-between; align-items:center;">
+                                                    <span style="font-weight:700; color:var(--rodin-graphite);"><i class="ph-bold ph-shield-check" style="color:var(--rodin-orange);"></i> Biometria Facial (Face ID)</span>
+                                                    <span style="font-size:10px; color:var(--rodin-orange); font-weight:800; text-transform:uppercase;">Segurança Inteligente</span>
+                                                </label>
+                                                <div style="background:#FFF; border:1.5px dashed var(--rodin-orange); border-radius:14px; padding:14px; text-align:center;">
+                                                    <button type="button" class="btn-primary-rodin" onclick="window.abrirModalScanNovoProfessor()" style="width:100%; justify-content:center; gap:8px; font-weight:800; background:linear-gradient(135deg, #FF6B2B 0%, #F45206 100%); font-size:12px; padding:10px 16px; border-radius:10px; box-shadow: 0 4px 12px rgba(244, 82, 6, 0.2);">
+                                                        <i class="ph-bold ph-user-focus" style="font-size:18px;"></i> Escanear Biometria Facial
+                                                    </button>
+                                                    <div id="badge-novo-prof-facial" style="margin-top:8px;">
+                                                        <span style="font-size:11px; color:var(--rodin-cool-gray);">Nenhuma face escaneada ainda (opcional)</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
                                             <button type="submit" class="btn-primary-rodin" style="width:100%; justify-content:center; margin-top:12px;">Cadastrar Professor</button>
                                         </form>
                                     </div>
