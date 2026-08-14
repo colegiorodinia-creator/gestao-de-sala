@@ -236,11 +236,39 @@ window.sincronizarBancoComSupabase = async function() {
         if (typeof window.renderizarComponentesCadastros === 'function') window.renderizarComponentesCadastros();
         if (typeof window.renderizarInterface === 'function') window.renderizarInterface();
 
-        document.dispatchEvent(new CustomEvent('rodin_db_synced', { detail: window.db }));
+// 3. UPLOAD DE FOTOS PARA O SUPABASE STORAGE
+window.fazerUploadFotoSupabaseStorage = async function(file, pasta = 'alunos') {
+    const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;
+    if (!sbClient || !sbClient.storage) return null;
+
+    try {
+        const ext = file.name.split('.').pop() || 'png';
+        const cleanName = file.name.replace(/[^a-zA-Z0-9]/g, '_');
+        const filePath = `${pasta}/${Date.now()}_${cleanName}.${ext}`;
+
+        const { data, error } = await sbClient.storage
+            .from('alunos-fotos')
+            .upload(filePath, file, {
+                cacheControl: '3600',
+                upsert: true
+            });
+
+        if (error) {
+            console.warn("[Supabase Storage Warning]:", error.message);
+            return null;
+        }
+
+        const { data: publicData } = sbClient.storage
+            .from('alunos-fotos')
+            .getPublicUrl(filePath);
+
+        return publicData ? publicData.publicUrl : null;
     } catch (err) {
-        console.warn("Aviso na sincronização do Supabase:", err);
+        console.warn("[Supabase Storage Error]:", err);
+        return null;
     }
 };
+var fazerUploadFotoSupabaseStorage = window.fazerUploadFotoSupabaseStorage;
 
 // Executar sincronização inicial imediatamente
 window.sincronizarBancoComSupabase();

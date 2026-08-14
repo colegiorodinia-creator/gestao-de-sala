@@ -634,6 +634,48 @@
             const turmaId = turmaEl ? turmaEl.value : '';
             const condicao = condicaoEl ? condicaoEl.value : 'Nenhuma';
 
+        window.processarUploadFotoAluno = function(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            window._fotoAlunoFileTemp = file;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('student-avatar-preview');
+                const placeholder = document.getElementById('student-upload-placeholder');
+                if (preview) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                }
+                if (placeholder) placeholder.style.display = 'none';
+                window._fotoAlunoPreviewTemp = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.processarUploadFotoEditAluno = function(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            window._fotoAlunoEditFileTemp = file;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('edit-aluno-avatar-preview');
+                if (preview) preview.src = e.target.result;
+                window._fotoAlunoEditPreviewTemp = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        // 2. ALUNOS
+        window.cadastrarAluno = async function(e) {
+            if (e && typeof e.preventDefault === 'function') e.preventDefault();
+            const nomeEl = document.getElementById('cad-aluno-nome');
+            const turmaEl = document.getElementById('cad-aluno-turma');
+            const condicaoEl = document.getElementById('cad-aluno-condicao');
+
+            const nome = nomeEl ? nomeEl.value.trim() : '';
+            const turmaId = turmaEl ? turmaEl.value : '';
+            const condicao = condicaoEl ? condicaoEl.value : 'Nenhuma';
+
             if (!nome || !turmaId) {
                 alert("Preencha o nome do aluno e escolha uma turma.");
                 return false;
@@ -642,12 +684,23 @@
             if (!window.db) window.db = { turmas: [], alunos: [], professores: [], disciplinas: [], usuarios_sistema: [] };
             if (!window.db.alunos) window.db.alunos = [];
 
+            let fotoUrlFinal = window._fotoAlunoPreviewTemp || `https://ui-avatars.com/api/?name=${encodeURIComponent(nome)}&background=FF8A4C&color=fff`;
+
+            // Tentar upload para o Supabase Storage se houver arquivo selecionado
+            if (window._fotoAlunoFileTemp && typeof window.fazerUploadFotoSupabaseStorage === 'function') {
+                const storageUrl = await window.fazerUploadFotoSupabaseStorage(window._fotoAlunoFileTemp, '6anoa');
+                if (storageUrl) {
+                    fotoUrlFinal = storageUrl;
+                }
+            }
+
             const novoAluno = {
                 id: `aluno_${Date.now()}`,
                 nome: nome,
                 turma_id: turmaId,
                 condicao: condicao,
-                foto: window._fotoAlunoPreviewTemp || `https://ui-avatars.com/api/?name=${encodeURIComponent(nome)}&background=FF8A4C&color=fff`
+                avatar: fotoUrlFinal,
+                foto: fotoUrlFinal
             };
 
             window.db.alunos.push(novoAluno);
@@ -657,22 +710,30 @@
                 localStorage.setItem('rodin_alunos', JSON.stringify(window.db.alunos));
             }
             window._fotoAlunoPreviewTemp = null;
+            window._fotoAlunoFileTemp = null;
 
             const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;
             if (sbClient && typeof sbClient.from === 'function') {
                 try {
-                    sbClient.from('alunos').insert([{
+                    await sbClient.from('alunos').insert([{
                         id: novoAluno.id,
                         nome: novoAluno.nome,
                         turma_id: novoAluno.turma_id,
                         condicao: novoAluno.condicao,
-                        foto: novoAluno.foto
-                    }]).then(()=>{}).catch(()=>{});
-                } catch(err){}
+                        avatar: novoAluno.avatar
+                    }]);
+                } catch(err){
+                    console.warn("Aviso ao salvar aluno no Supabase:", err);
+                }
             }
 
             const formEl = document.getElementById('form-cad-aluno');
             if (formEl) formEl.reset();
+
+            const preview = document.getElementById('student-avatar-preview');
+            const placeholder = document.getElementById('student-upload-placeholder');
+            if (preview) preview.style.display = 'none';
+            if (placeholder) placeholder.style.display = 'flex';
 
             window.renderizarListaAlunosCadastrados();
             if (typeof mostrarSnackbar === 'function') mostrarSnackbar(`Aluno(a) '${nome}' matriculado(a) com sucesso!`);
