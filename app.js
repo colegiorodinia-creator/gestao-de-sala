@@ -4969,27 +4969,37 @@ function renderizarListaProfessoresCadastrados() {
     const container = document.getElementById('lista-professores-cadastrados');
     if (!container) return;
 
-    if (!db.professores) db.professores = [];
+    const professores = (window.db && window.db.professores) ? window.db.professores : (typeof db !== 'undefined' && db.professores ? db.professores : []);
 
-    if (db.professores.length === 0) {
+    if (professores.length === 0) {
         container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--rodin-cool-gray); font-size:13px;">Nenhum professor cadastrado.</div>`;
         return;
     }
 
-    container.innerHTML = db.professores.map(p => {
+    container.innerHTML = professores.map(p => {
         const foto = p.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.nome)}&background=4F46E5&color=fff`;
+        const temFacial = (p.facial_descriptor && p.facial_descriptor.length > 0) || (p.facial_descriptors && p.facial_descriptors.length > 0) || (p.biometria_facial_status === 'cadastrada');
+
         return `
-            <div style="display:flex; justify-content:space-between; align-items:center; background:#F8FAFC; padding:10px 14px; border-radius:12px; border:1px solid var(--rodin-line);">
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <img src="${foto}" style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid #4F46E5;">
-                    <div>
-                        <strong style="font-size:13px; color:var(--rodin-graphite); display:block;">${p.nome}</strong>
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#F8FAFC; padding:12px 14px; border-radius:14px; border:1px solid var(--rodin-line); gap:12px;">
+                <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+                    <img src="${foto}" style="width:42px; height:42px; border-radius:50%; object-fit:cover; border:2px solid #4F46E5; flex-shrink:0;">
+                    <div style="min-width:0;">
+                        <strong style="font-size:13px; color:var(--rodin-graphite); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.nome}</strong>
                         <div style="font-size:11px; color:var(--rodin-cool-gray); font-weight:600;">${p.disciplina || 'Geral'} • ${p.etapa || 'Todas as Etapas'}</div>
                     </div>
                 </div>
-                <button class="btn-reset-pink" onclick="excluirProfessor('${p.id}')" style="padding:6px 12px; font-size:11px;">
-                    <i class="ph-bold ph-trash"></i> Excluir
-                </button>
+                <div style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
+                    <button type="button" class="btn-primary-rodin" onclick="window.abrirModalCadastroFacial('${p.id}')" title="Scan / Cadastro Facial Face ID" style="font-size:11px; padding:6px 12px; border-radius:8px; gap:4px; cursor:pointer; background:${temFacial ? '#059669' : 'var(--rodin-orange)'}; color:#FFF;">
+                        <i class="ph-bold ph-user-focus"></i> ${temFacial ? 'Biometria Ativa' : 'Scan Facial'}
+                    </button>
+                    <button type="button" class="btn-primary-rodin" onclick="window.abrirModalEditarProfessor('${p.id}')" title="Editar Professor" style="background:#475569; color:#FFF; font-size:11px; padding:6px 12px; border-radius:8px; gap:4px; cursor:pointer;">
+                        <i class="ph-bold ph-pencil-line"></i> Editar
+                    </button>
+                    <button type="button" class="btn-reset-pink" onclick="window.excluirProfessor('${p.id}')" title="Excluir Professor" style="padding:6px 10px; font-size:11px; cursor:pointer;">
+                        <i class="ph-bold ph-trash"></i>
+                    </button>
+                </div>
             </div>
         `;
     }).join('');
