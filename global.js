@@ -236,6 +236,12 @@ window.sincronizarBancoComSupabase = async function() {
         if (typeof window.renderizarComponentesCadastros === 'function') window.renderizarComponentesCadastros();
         if (typeof window.renderizarInterface === 'function') window.renderizarInterface();
 
+        document.dispatchEvent(new CustomEvent('rodin_db_synced', { detail: window.db }));
+    } catch (err) {
+        console.warn("Aviso na sincronização do Supabase:", err);
+    }
+};
+
 // 3. UPLOAD DE FOTOS PARA O SUPABASE STORAGE
 window.fazerUploadFotoSupabaseStorage = async function(file, pasta = 'alunos') {
     const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;
