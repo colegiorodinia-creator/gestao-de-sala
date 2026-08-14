@@ -104,6 +104,60 @@
         }
     </style>
     <script>
+        window.renderizarComponentesCadastros = function() {
+            // 1. Preencher Selects de Turmas
+            const selAlunoTurma = document.getElementById('cad-aluno-turma');
+            const selFiltroTurma = document.getElementById('cad-filtro-turma');
+            let turmas = (window.db && window.db.turmas && window.db.turmas.length > 0) 
+                ? window.db.turmas 
+                : [];
+            
+            if (turmas.length === 0) {
+                try {
+                    const raw = localStorage.getItem('rodin_turmas');
+                    if (raw) turmas = JSON.parse(raw);
+                } catch(e){}
+            }
+
+            const turmasOrdenadas = window.ordenarTurmas ? window.ordenarTurmas(turmas) : turmas;
+
+            if (selAlunoTurma) {
+                selAlunoTurma.innerHTML = turmasOrdenadas.length > 0 
+                    ? turmasOrdenadas.map(t => `<option value="${t.id}">${t.nome}</option>`).join('')
+                    : '<option value="">Nenhuma turma cadastrada</option>';
+            }
+
+            if (selFiltroTurma) {
+                const valorAtual = selFiltroTurma.value || 'todas';
+                selFiltroTurma.innerHTML = `
+                    <option value="todas">Todas as Turmas Permitidas</option>
+                    ${turmasOrdenadas.map(t => `<option value="${t.id}">${t.nome}</option>`).join('')}
+                `;
+                selFiltroTurma.value = valorAtual;
+            }
+
+            // 2. Preencher Select de Disciplinas
+            if (typeof window.atualizarDisciplinasPorEtapa === 'function') {
+                window.atualizarDisciplinasPorEtapa();
+            }
+
+            // 3. Renderizar Checkboxes de Turmas Permitidas
+            if (typeof window.renderizarCheckboxesTurmasPermitidas === 'function') {
+                window.renderizarCheckboxesTurmasPermitidas();
+            }
+
+            // 4. Renderizar Lista de Usuários e Permissões
+            if (typeof window.renderizarListaUsuariosCadastradosPainel === 'function') {
+                window.renderizarListaUsuariosCadastradosPainel();
+            }
+
+            // 5. Renderizar Listas das outras abas
+            if (typeof window.renderizarListaTurmasCadastradas === 'function') window.renderizarListaTurmasCadastradas();
+            if (typeof window.renderizarListaAlunosCadastrados === 'function') window.renderizarListaAlunosCadastrados();
+            if (typeof window.renderizarListaProfessoresCadastrados === 'function') window.renderizarListaProfessoresCadastrados();
+            if (typeof window.renderizarListaDisciplinasCadastradas === 'function') window.renderizarListaDisciplinasCadastradas();
+        };
+
         function alternarSubAbaCadastros(subTabId) {
             const tabs = ['alunos', 'professores', 'turmas', 'disciplinas', 'usuarios'];
             tabs.forEach(t => {
@@ -127,19 +181,8 @@
                 }
             });
 
-            if (subTabId === 'usuarios') {
-                if (typeof window.renderizarListaUsuariosCadastradosPainel === 'function') window.renderizarListaUsuariosCadastradosPainel();
-                if (typeof window.renderizarCheckboxesTurmasPermitidas === 'function') window.renderizarCheckboxesTurmasPermitidas();
-                if (typeof window.alternarOpcoesTurmasPermitidasForm === 'function') window.alternarOpcoesTurmasPermitidasForm();
-            } else if (subTabId === 'disciplinas') {
-                if (typeof window.renderizarListaDisciplinasCadastradas === 'function') window.renderizarListaDisciplinasCadastradas();
-            } else if (subTabId === 'professores') {
-                if (typeof window.atualizarDisciplinasPorEtapa === 'function') window.atualizarDisciplinasPorEtapa();
-                if (typeof window.renderizarListaProfessoresCadastrados === 'function') window.renderizarListaProfessoresCadastrados();
-            } else if (subTabId === 'turmas') {
-                if (typeof window.renderizarListaTurmasCadastradas === 'function') window.renderizarListaTurmasCadastradas();
-            } else if (subTabId === 'alunos') {
-                if (typeof window.renderizarListaAlunosCadastrados === 'function') window.renderizarListaAlunosCadastrados();
+            if (typeof window.renderizarComponentesCadastros === 'function') {
+                window.renderizarComponentesCadastros();
             }
         }
         window.alternarSubAbaCadastros = alternarSubAbaCadastros;
@@ -149,14 +192,15 @@
             const container = document.getElementById('checkboxes-turmas-permitidas');
             if (!container) return;
 
-            if (!window.db) window.db = { turmas: [], alunos: [], professores: [], disciplinas: [], usuarios_sistema: [] };
-            if (!window.db.turmas || window.db.turmas.length === 0) {
+            let turmas = (window.db && window.db.turmas && window.db.turmas.length > 0) ? window.db.turmas : [];
+            if (turmas.length === 0) {
                 try {
                     const raw = localStorage.getItem('rodin_turmas');
-                    if (raw) window.db.turmas = JSON.parse(raw);
+                    if (raw) turmas = JSON.parse(raw);
                 } catch(e){}
             }
-            const turmasOrdenadas = window.ordenarTurmas ? window.ordenarTurmas(window.db.turmas || []) : (window.db.turmas || []);
+
+            const turmasOrdenadas = window.ordenarTurmas ? window.ordenarTurmas(turmas) : turmas;
             if (turmasOrdenadas.length === 0) {
                 container.innerHTML = `<span style="font-size:11px; color:var(--rodin-cool-gray);">Nenhuma turma cadastrada. Crie turmas na aba 'Gestão de Turmas'.</span>`;
                 return;
@@ -181,7 +225,9 @@
             const container = document.getElementById('lista-usuarios-cadastrados-painel');
             if (!container) return;
 
-            const usuarios = window.obterListaUsuariosSistema ? window.obterListaUsuariosSistema() : [];
+            let usuarios = (window.db && window.db.usuarios_sistema && window.db.usuarios_sistema.length > 0)
+                ? window.db.usuarios_sistema
+                : (window.obterListaUsuariosSistema ? window.obterListaUsuariosSistema() : []);
 
             if (!usuarios || usuarios.length === 0) {
                 container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--rodin-cool-gray); font-size:13px;">Nenhum usuário cadastrado no sistema.</div>`;
@@ -1525,18 +1571,20 @@
 
     <!-- SCRIPTS -->
     <script src="global.js"></script>
-    <script src="app.js"></script>
     <script src="sidebar.js"></script>
+    <script src="app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
     <script src="face_security.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            renderizarSidebarModelo('cadastros');
-            if (typeof inicializarApp === 'function') {
-                await inicializarApp();
+            if (typeof renderizarSidebarModelo === 'function') renderizarSidebarModelo('cadastros');
+            if (typeof window.renderizarComponentesCadastros === 'function') window.renderizarComponentesCadastros();
+            
+            if (typeof window.sincronizarBancoComSupabase === 'function') {
+                await window.sincronizarBancoComSupabase();
             }
-            if (typeof renderizarComponentesCadastros === 'function') renderizarComponentesCadastros();
-            if (typeof carregarCadastros === 'function') carregarCadastros();
+            
+            if (typeof window.renderizarComponentesCadastros === 'function') window.renderizarComponentesCadastros();
             if (typeof alternarSubAbaCadastros === 'function') alternarSubAbaCadastros('alunos');
         });
     </script>
