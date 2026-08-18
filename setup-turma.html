@@ -694,20 +694,21 @@
                         let colsHtml = `<td class="time-col"><strong>${h.label}</strong><br><span style="font-size:10px; font-weight:600; color:#94A3B8;">${h.hora}</span></td>`;
                         for (let dia = 0; dia < 5; dia++) {
                             const slot = gradeTurma.find(s => s.posicao_x === dia && s.posicao_y === h.aula);
-                            const disc = slot ? disciplinas.find(d => d.id === slot.disciplina_id) : null;
-                            const prof = slot ? professores.find(p => p.id === slot.professor_id) : null;
+                            const disc = slot ? disciplinas.find(d => d.id === slot.disciplina_id || d.nome === slot.disciplina_id) : null;
+                            const prof = slot ? professores.find(p => p.id === slot.professor_id || p.nome === slot.professor_id) : null;
 
                             if (disc) {
+                                const isPd = (disc.nome || '').trim().toUpperCase() === 'PD';
                                 colsHtml += `
                                     <td>
                                         <div class="timetable-dropzone" 
                                              ondragover="window.allowDropTimetable(event)" 
                                              ondragleave="window.dragLeaveTimetable(event)" 
                                              ondrop="window.dropOnTimetable(event, ${dia}, ${h.aula})">
-                                            <div class="timetable-slot-card" style="border-left-color:${disc.cor || 'var(--rodin-orange)'};">
+                                            <div class="timetable-slot-card ${isPd ? 'is-pd' : ''}" style="border-left-color:${disc.cor || 'var(--rodin-orange)'};">
                                                 <button type="button" class="timetable-slot-remove" onclick="window.removerSlotGrade(${dia}, ${h.aula})" title="Remover aula">&times;</button>
                                                 <strong>${disc.nome}</strong>
-                                                <span>${prof ? prof.nome.split(' ')[0] : ''}</span>
+                                                ${!isPd && prof ? `<span>${prof.nome}</span>` : ''}
                                             </div>
                                         </div>
                                     </td>
