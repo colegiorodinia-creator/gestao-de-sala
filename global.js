@@ -17,7 +17,10 @@ window.db = window.db || {
     alunos: [],
     professores: [],
     disciplinas: [],
-    usuarios_sistema: []
+    usuarios_sistema: [],
+    mapa_slots: [],
+    grade_slots: [],
+    ocorrencias: []
 };
 var db = window.db;
 
@@ -191,6 +194,8 @@ window.carregarBancoDeDadosLocal = function() {
         const d = localStorage.getItem('rodin_disciplinas');
         const u = localStorage.getItem('rodin_usuarios_sistema');
         const o = localStorage.getItem('rodin_ocorrencias');
+        const m = localStorage.getItem('rodin_mapa_slots') || localStorage.getItem('rodin_mapa_sala_slots');
+        const g = localStorage.getItem('rodin_grade_slots') || localStorage.getItem('rodin_grade_horaria_slots');
 
         if (t) window.db.turmas = JSON.parse(t);
         if (a) window.db.alunos = JSON.parse(a);
@@ -209,11 +214,17 @@ window.carregarBancoDeDadosLocal = function() {
         if (u) window.db.usuarios_sistema = JSON.parse(u);
         if (o) window.db.ocorrencias = JSON.parse(o);
         else if (!window.db.ocorrencias) window.db.ocorrencias = [];
+        if (m) window.db.mapa_slots = JSON.parse(m);
+        else if (!window.db.mapa_slots) window.db.mapa_slots = [];
+        if (g) window.db.grade_slots = JSON.parse(g);
+        else if (!window.db.grade_slots) window.db.grade_slots = [];
     } catch(err) {
         console.warn("[Local DB Load Warning]:", err);
     }
 };
 if (!window.db.ocorrencias) window.db.ocorrencias = [];
+if (!window.db.mapa_slots) window.db.mapa_slots = [];
+if (!window.db.grade_slots) window.db.grade_slots = [];
 window.carregarBancoDeDadosLocal();
 
 // 2. SINCRONIZAÇÃO COMPLETA COM O SUPABASE (SEM GERAR DADOS FAKE)
@@ -222,12 +233,14 @@ window.sincronizarBancoComSupabase = async function() {
     if (!sbClient || typeof sbClient.from !== 'function') return;
 
     try {
-        const [resTurmas, resAlunos, resProfs, resDisc, resUsuarios] = await Promise.all([
+        const [resTurmas, resAlunos, resProfs, resDisc, resUsuarios, resMapa, resGrade] = await Promise.all([
             sbClient.from('turmas').select('*'),
             sbClient.from('alunos').select('*'),
             sbClient.from('professores').select('*'),
             sbClient.from('disciplinas').select('*'),
-            sbClient.from('usuarios_sistema').select('*')
+            sbClient.from('usuarios_sistema').select('*'),
+            sbClient.from('mapa_sala_slots').select('*'),
+            sbClient.from('grade_horaria_slots').select('*')
         ]);
 
         if (resTurmas && Array.isArray(resTurmas.data)) {
@@ -273,6 +286,16 @@ window.sincronizarBancoComSupabase = async function() {
             window.salvarListaUsuariosSistema(window.db.usuarios_sistema);
         }
 
+        if (resMapa && Array.isArray(resMapa.data)) {
+            window.db.mapa_slots = resMapa.data;
+            window.safeSetLocalStorage('rodin_mapa_slots', window.db.mapa_slots);
+        }
+
+        if (resGrade && Array.isArray(resGrade.data)) {
+            window.db.grade_slots = resGrade.data;
+            window.safeSetLocalStorage('rodin_grade_slots', window.db.grade_slots);
+        }
+
         // Disparar atualizações nas interfaces ativas
         if (typeof window.renderizarListaUsuariosCadastradosPainel === 'function') window.renderizarListaUsuariosCadastradosPainel();
         if (typeof window.renderizarCheckboxesTurmasPermitidas === 'function') window.renderizarCheckboxesTurmasPermitidas();
@@ -281,7 +304,14 @@ window.sincronizarBancoComSupabase = async function() {
         if (typeof window.renderizarListaProfessoresCadastrados === 'function') window.renderizarListaProfessoresCadastrados();
         if (typeof window.renderizarListaDisciplinasCadastradas === 'function') window.renderizarListaDisciplinasCadastradas();
         if (typeof window.renderizarComponentesCadastros === 'function') window.renderizarComponentesCadastros();
+        if (typeof window.carregarSetupTurma === 'function') window.carregarSetupTurma();
         if (typeof window.renderizarInterface === 'function') window.renderizarInterface();
+
+        document.dispatchEvent(new CustomEvent('rodin_db_synced', { detail: window.db }));
+    } catch (err) {
+        console.warn("Aviso na sincronização do Supabase:", err);
+    }
+};
 
         document.dispatchEvent(new CustomEvent('rodin_db_synced', { detail: window.db }));
     } catch (err) {

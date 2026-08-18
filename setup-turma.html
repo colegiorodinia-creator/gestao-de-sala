@@ -24,6 +24,7 @@
     <script src="/assets/js/html2pdf.bundle.min.js"></script>
 
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="setup-turma.css">
 </head>
 <body>
 
@@ -224,9 +225,630 @@
     <script src="face_security.js"></script>
     <script src="app.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            renderizarSidebarModelo('setup-turma');
-            carregarSetupTurma();
+        // ============================================================
+        // SETUP DE TURMA (MAPA DE CARTEIRAS E GRADE HORÁRIA SEMANAL)
+        // ============================================================
+
+        window.alternarSubAbaSetup = function(subTab) {
+            const btnMapa = document.getElementById('btn-setup-tab-mapa');
+            const btnGrade = document.getElementById('btn-setup-tab-grade');
+            const panelMapa = document.getElementById('setup-subview-mapa');
+            const panelGrade = document.getElementById('setup-subview-grade');
+
+            if (subTab === 'mapa') {
+                if (btnMapa) btnMapa.classList.add('active');
+                if (btnGrade) btnGrade.classList.remove('active');
+                if (panelMapa) {
+                    panelMapa.classList.add('active');
+                    panelMapa.style.display = 'block';
+                }
+                if (panelGrade) {
+                    panelGrade.classList.remove('active');
+                    panelGrade.style.display = 'none';
+                }
+            } else {
+                if (btnGrade) btnGrade.classList.add('active');
+                if (btnMapa) btnMapa.classList.remove('active');
+                if (panelGrade) {
+                    panelGrade.classList.add('active');
+                    panelGrade.style.display = 'block';
+                }
+                if (panelMapa) {
+                    panelMapa.classList.remove('active');
+                    panelMapa.style.display = 'none';
+                }
+            }
+        };
+        var alternarSubAbaSetup = window.alternarSubAbaSetup;
+
+        window.obterTurmaAtivaSetup = function() {
+            const sel = document.getElementById('setup-turma-select');
+            let turmas = (window.db && window.db.turmas && window.db.turmas.length > 0)
+                ? window.db.turmas
+                : [];
+            if (turmas.length === 0) {
+                try {
+                    const raw = localStorage.getItem('rodin_turmas');
+                    if (raw) turmas = JSON.parse(raw);
+                } catch(e){}
+            }
+            const turmasOrdenadas = window.ordenarTurmas ? window.ordenarTurmas(turmas) : turmas;
+            if (turmasOrdenadas.length === 0) return null;
+
+            const val = sel ? sel.value : null;
+            if (val) {
+                const found = turmasOrdenadas.find(t => t.id === val || t.slug === val || t.nome === val);
+                if (found) return found;
+            }
+            return turmasOrdenadas[0];
+        };
+
+        window.obterAlunosTurmaSetup = function(turma) {
+            if (!turma) return [];
+            let todosAlunos = (window.db && window.db.alunos && window.db.alunos.length > 0)
+                ? window.db.alunos
+                : [];
+            if (todosAlunos.length === 0) {
+                try {
+                    const raw = localStorage.getItem('rodin_alunos');
+                    if (raw) todosAlunos = JSON.parse(raw);
+                } catch(e){}
+            }
+
+            const tNome = (turma.nome || '').toLowerCase();
+            const tSlug = (turma.slug || '').toLowerCase();
+            const tId = (turma.id || '').toLowerCase();
+
+            return todosAlunos.filter(a => {
+                const aTurma = (a.turma_id || '').toLowerCase();
+                if (aTurma === tId || aTurma === tSlug || aTurma === tNome) return true;
+                // Correspondência flexível para 6º Ano A
+                if ((tNome.includes('6') && tNome.includes('a')) && (aTurma === 't1' || aTurma === 'turma_6anoa' || (a.id && a.id.startsWith('aluno_6a_')))) {
+                    return true;
+                }
+                return false;
+            }).sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'));
+        };
+
+        window.carregarSetupTurma = function(turmaId) {
+            const sel = document.getElementById('setup-turma-select');
+            let turmas = (window.db && window.db.turmas && window.db.turmas.length > 0)
+                ? window.db.turmas
+                : [];
+            if (turmas.length === 0) {
+                try {
+                    const raw = localStorage.getItem('rodin_turmas');
+                    if (raw) turmas = JSON.parse(raw);
+                } catch(e){}
+            }
+            const turmasOrdenadas = window.ordenarTurmas ? window.ordenarTurmas(turmas) : turmas;
+
+            if (sel && turmasOrdenadas.length > 0) {
+                const valorAtual = turmaId || sel.value || turmasOrdenadas[0].id;
+                sel.innerHTML = turmasOrdenadas.map(t => `<option value="${t.id}">${t.nome}</option>`).join('');
+                if (turmasOrdenadas.some(t => t.id === valorAtual)) {
+                    sel.value = valorAtual;
+                } else {
+                    sel.value = turmasOrdenadas[0].id;
+                }
+            }
+
+            const turma = window.obterTurmaAtivaSetup();
+            if (!turma) return;
+
+            if (!turma.config_mapa) {
+                turma.config_mapa = { linhas: 5, colunas: 6 };
+            }
+            const linhas = turma.config_mapa.linhas || 5;
+            const colunas = turma.config_mapa.colunas || 6;
+
+            const elRows = document.getElementById('setup-rows-count');
+            const elCols = document.getElementById('setup-cols-count');
+            if (elRows) elRows.innerText = linhas;
+            if (elCols) elCols.innerText = colunas;
+
+            window.renderizarAlunosPaletteSetup();
+            window.renderizarGridCarteirasSetup();
+            window.renderizarGradeHorariaSetup();
+        };
+        var carregarSetupTurma = window.carregarSetupTurma;
+
+        window.renderizarAlunosPaletteSetup = function() {
+            const turma = window.obterTurmaAtivaSetup();
+            if (!turma) return;
+
+            const container = document.getElementById('setup-palette-alunos');
+            const elContador = document.getElementById('setup-alocado-count');
+            const inputBusca = document.getElementById('setup-aluno-search');
+            const busca = inputBusca ? inputBusca.value.trim().toLowerCase() : '';
+
+            const alunosTurma = window.obterAlunosTurmaSetup(turma);
+            const slots = (window.db && window.db.mapa_slots) ? window.db.mapa_slots : [];
+            const slotsTurma = slots.filter(s => s.turma_id === turma.id && s.aluno_id);
+            const setAlocados = new Set(slotsTurma.map(s => s.aluno_id));
+
+            if (elContador) {
+                elContador.innerText = `${setAlocados.size}/${alunosTurma.length}`;
+            }
+
+            if (!container) return;
+
+            const alunosFiltrados = alunosTurma.filter(a => {
+                if (!busca) return true;
+                return (a.nome || '').toLowerCase().includes(busca);
+            });
+
+            if (alunosFiltrados.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--rodin-cool-gray); font-size:12px;">Nenhum aluno encontrado.</div>`;
+                return;
+            }
+
+            container.innerHTML = alunosFiltrados.map(aluno => {
+                const isAlocado = setAlocados.has(aluno.id);
+                const foto = aluno.foto || aluno.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(aluno.nome)}&background=FF8A4C&color=fff`;
+                const slotOcupado = slotsTurma.find(s => s.aluno_id === aluno.id);
+                const posText = slotOcupado ? `Carteira (L${slotOcupado.posicao_y + 1}, C${slotOcupado.posicao_x + 1})` : (aluno.condicao && aluno.condicao !== 'Nenhuma' ? aluno.condicao : 'Disponível');
+
+                return `
+                    <div class="draggable-student-chip ${isAlocado ? 'alocado' : ''}" 
+                         draggable="true" 
+                         data-aluno-id="${aluno.id}"
+                         ondragstart="window.dragStartAlunoPalette(event, '${aluno.id}')"
+                         title="${aluno.nome}">
+                        <img src="${foto}" alt="${aluno.nome}" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(aluno.nome)}&background=FF8A4C&color=fff'">
+                        <div class="student-chip-name">
+                            <strong style="display:block; font-size:12px; color:var(--rodin-graphite);">${aluno.nome}</strong>
+                            <span style="font-size:10px; color:${isAlocado ? '#059669' : 'var(--rodin-cool-gray)'}; font-weight:700;">
+                                ${isAlocado ? `✓ ${posText}` : posText}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        window.renderizarGridCarteirasSetup = function() {
+            const turma = window.obterTurmaAtivaSetup();
+            const container = document.getElementById('setup-grid-carteiras');
+            if (!turma || !container) return;
+
+            const linhas = (turma.config_mapa && turma.config_mapa.linhas) || 5;
+            const colunas = (turma.config_mapa && turma.config_mapa.colunas) || 6;
+
+            container.style.display = 'grid';
+            container.style.gridTemplateColumns = `repeat(${colunas}, minmax(0, 1fr))`;
+            container.style.gap = '12px';
+            container.style.width = '100%';
+
+            const slots = (window.db && window.db.mapa_slots) ? window.db.mapa_slots : [];
+            const slotsTurma = slots.filter(s => s.turma_id === turma.id);
+            const alunos = (window.db && window.db.alunos) ? window.db.alunos : [];
+
+            let html = '';
+            for (let r = 0; r < linhas; r++) {
+                for (let c = 0; c < colunas; c++) {
+                    const numCarteira = r * colunas + c + 1;
+                    const slot = slotsTurma.find(s => s.posicao_x === c && s.posicao_y === r);
+                    const aluno = slot ? alunos.find(a => a.id === slot.aluno_id) : null;
+
+                    if (aluno) {
+                        const foto = aluno.foto || aluno.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(aluno.nome)}&background=FF8A4C&color=fff`;
+                        const partesNome = aluno.nome.trim().split(' ');
+                        const nomeCurto = partesNome.length > 1 ? `${partesNome[0]} ${partesNome[partesNome.length - 1]}` : partesNome[0];
+
+                        html += `
+                            <div class="desk-dropzone" 
+                                 data-x="${c}" 
+                                 data-y="${r}"
+                                 ondragover="window.allowDropDesk(event)" 
+                                 ondragleave="window.dragLeaveDesk(event)" 
+                                 ondrop="window.dropOnDesk(event, ${c}, ${r})"
+                                 style="background:#FFFFFF; border:2px solid #CBD5E1; box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+                                <span class="desk-number-badge">#${numCarteira}</span>
+                                <button type="button" class="desk-remove-btn" onclick="window.removerAlunoCarteira(${c}, ${r})" title="Remover da carteira">&times;</button>
+                                <div class="desk-occupant" draggable="true" ondragstart="window.dragStartAlunoDesk(event, '${aluno.id}', ${c}, ${r})">
+                                    <img src="${foto}" alt="${aluno.nome}" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(aluno.nome)}&background=FF8A4C&color=fff'">
+                                    <span class="occupant-name" title="${aluno.nome}">${nomeCurto}</span>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        html += `
+                            <div class="desk-dropzone" 
+                                 data-x="${c}" 
+                                 data-y="${r}"
+                                 ondragover="window.allowDropDesk(event)" 
+                                 ondragleave="window.dragLeaveDesk(event)" 
+                                 ondrop="window.dropOnDesk(event, ${c}, ${r})">
+                                <span class="desk-number-badge">#${numCarteira}</span>
+                                <div style="font-size:11px; color:#94A3B8; font-weight:700; text-align:center; padding:12px 0;">
+                                    <i class="ph-bold ph-plus-circle" style="font-size:20px; display:block; margin:0 auto 2px; color:#CBD5E1;"></i>
+                                    Vazio
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+            }
+
+            container.innerHTML = html;
+        };
+
+        // DRAG AND DROP HANDLERS (CARTEIRAS)
+        window.dragStartAlunoPalette = function(e, alunoId) {
+            e.dataTransfer.setData('text/plain', JSON.stringify({
+                origem: 'palette',
+                alunoId: alunoId
+            }));
+        };
+
+        window.dragStartAlunoDesk = function(e, alunoId, x, y) {
+            e.dataTransfer.setData('text/plain', JSON.stringify({
+                origem: 'desk',
+                alunoId: alunoId,
+                fromX: x,
+                fromY: y
+            }));
+        };
+
+        window.allowDropDesk = function(e) {
+            e.preventDefault();
+            const zone = e.currentTarget;
+            if (zone) zone.classList.add('drag-over');
+        };
+
+        window.dragLeaveDesk = function(e) {
+            const zone = e.currentTarget;
+            if (zone) zone.classList.remove('drag-over');
+        };
+
+        window.dropOnDesk = function(e, toX, toY) {
+            e.preventDefault();
+            const zone = e.currentTarget;
+            if (zone) zone.classList.remove('drag-over');
+
+            const turma = window.obterTurmaAtivaSetup();
+            if (!turma) return;
+
+            let data;
+            try {
+                data = JSON.parse(e.dataTransfer.getData('text/plain'));
+            } catch(err) { return; }
+
+            if (!data || !data.alunoId) return;
+
+            if (!window.db.mapa_slots) window.db.mapa_slots = [];
+
+            // Se veio da mesma carteira destino, nada a fazer
+            if (data.origem === 'desk' && data.fromX === toX && data.fromY === toY) return;
+
+            // Verificar se a carteira de destino já está ocupada
+            const slotDestinoIndex = window.db.mapa_slots.findIndex(s => s.turma_id === turma.id && s.posicao_x === toX && s.posicao_y === toY);
+            const alunoDestinoId = slotDestinoIndex !== -1 ? window.db.mapa_slots[slotDestinoIndex].aluno_id : null;
+
+            // Remover alocação anterior do aluno atual nesta turma
+            window.db.mapa_slots = window.db.mapa_slots.filter(s => !(s.turma_id === turma.id && s.aluno_id === data.alunoId));
+
+            if (data.origem === 'desk' && alunoDestinoId) {
+                // Troca (swap) de carteiras
+                window.db.mapa_slots = window.db.mapa_slots.filter(s => !(s.turma_id === turma.id && s.posicao_x === data.fromX && s.posicao_y === data.fromY));
+                window.db.mapa_slots.push({
+                    id: `m_slot_${turma.id}_${data.fromX}_${data.fromY}`,
+                    turma_id: turma.id,
+                    aluno_id: alunoDestinoId,
+                    posicao_x: data.fromX,
+                    posicao_y: data.fromY,
+                    updated_at: new Date().toISOString()
+                });
+            }
+
+            // Alocar aluno na carteira de destino
+            window.db.mapa_slots = window.db.mapa_slots.filter(s => !(s.turma_id === turma.id && s.posicao_x === toX && s.posicao_y === toY));
+            window.db.mapa_slots.push({
+                id: `m_slot_${turma.id}_${toX}_${toY}`,
+                turma_id: turma.id,
+                aluno_id: data.alunoId,
+                posicao_x: toX,
+                posicao_y: toY,
+                updated_at: new Date().toISOString()
+            });
+
+            window.safeSetLocalStorage('rodin_mapa_slots', window.db.mapa_slots);
+            window.renderizarAlunosPaletteSetup();
+            window.renderizarGridCarteirasSetup();
+        };
+
+        window.removerAlunoCarteira = function(x, y) {
+            const turma = window.obterTurmaAtivaSetup();
+            if (!turma || !window.db.mapa_slots) return;
+
+            window.db.mapa_slots = window.db.mapa_slots.filter(s => !(s.turma_id === turma.id && s.posicao_x === x && s.posicao_y === y));
+            window.safeSetLocalStorage('rodin_mapa_slots', window.db.mapa_slots);
+            window.renderizarAlunosPaletteSetup();
+            window.renderizarGridCarteirasSetup();
+        };
+
+        window.alterarLinhasCarteira = function(delta) {
+            const turma = window.obterTurmaAtivaSetup();
+            if (!turma) return;
+            if (!turma.config_mapa) turma.config_mapa = { linhas: 5, colunas: 6 };
+
+            let novasLinhas = (turma.config_mapa.linhas || 5) + delta;
+            if (novasLinhas < 2) novasLinhas = 2;
+            if (novasLinhas > 10) novasLinhas = 10;
+
+            turma.config_mapa.linhas = novasLinhas;
+            const elRows = document.getElementById('setup-rows-count');
+            if (elRows) elRows.innerText = novasLinhas;
+
+            window.renderizarGridCarteirasSetup();
+        };
+
+        window.alterarColunasCarteira = function(delta) {
+            const turma = window.obterTurmaAtivaSetup();
+            if (!turma) return;
+            if (!turma.config_mapa) turma.config_mapa = { linhas: 5, colunas: 6 };
+
+            let novasColunas = (turma.config_mapa.colunas || 6) + delta;
+            if (novasColunas < 2) novasColunas = 2;
+            if (novasColunas > 10) novasColunas = 10;
+
+            turma.config_mapa.colunas = novasColunas;
+            const elCols = document.getElementById('setup-cols-count');
+            if (elCols) elCols.innerText = novasColunas;
+
+            window.renderizarGridCarteirasSetup();
+        };
+
+        window.filtrarAlunosSetup = function() {
+            window.renderizarAlunosPaletteSetup();
+        };
+
+        // ============================================================
+        // GRADE HORÁRIA SEMANAL
+        // ============================================================
+        const HORARIOS_AULAS = [
+            { aula: 0, label: '1ª Aula', hora: '07h15 - 08h05' },
+            { aula: 1, label: '2ª Aula', hora: '08h05 - 08h55' },
+            { aula: 2, label: '3ª Aula', hora: '08h55 - 09h45' },
+            { intervalo: true, hora: '09h45 - 10h15', label: 'INTERVALO / RECREIO' },
+            { aula: 3, label: '4ª Aula', hora: '10h15 - 11h05' },
+            { aula: 4, label: '5ª Aula', hora: '11h05 - 11h55' },
+            { aula: 5, label: '6ª Aula', hora: '11h55 - 12h45' }
+        ];
+
+        window.renderizarGradeHorariaSetup = function() {
+            const turma = window.obterTurmaAtivaSetup();
+            const palette = document.getElementById('setup-palette-disciplinas');
+            const tbody = document.getElementById('setup-timetable-body');
+            if (!turma) return;
+
+            const disciplinas = (window.db && window.db.disciplinas) ? window.db.disciplinas : [];
+            const professores = (window.db && window.db.professores) ? window.db.professores : [];
+
+            // Renderizar paleta de disciplinas
+            if (palette) {
+                palette.innerHTML = disciplinas.map(d => {
+                    const prof = professores.find(p => p.disciplina === d.nome);
+                    const profNome = prof ? prof.nome : 'Professor(a)';
+                    return `
+                        <div class="draggable-disc-chip" 
+                             draggable="true" 
+                             ondragstart="window.dragStartDisciplina(event, '${d.id}', '${prof ? prof.id : ''}')"
+                             title="Arraste para a grade">
+                            <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+                                <span style="width:10px; height:10px; border-radius:50%; background:${d.cor || 'var(--rodin-orange)'}; flex-shrink:0;"></span>
+                                <div style="min-width:0;">
+                                    <strong style="font-size:12px; color:var(--rodin-graphite); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${d.nome}</strong>
+                                    <span style="font-size:10px; color:var(--rodin-cool-gray);">${profNome}</span>
+                                </div>
+                            </div>
+                            <i class="ph-bold ph-dots-six-vertical" style="color:#CBD5E1; font-size:16px;"></i>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Renderizar tabela semanal
+            if (tbody) {
+                const gradeSlots = (window.db && window.db.grade_slots) ? window.db.grade_slots : [];
+                const gradeTurma = gradeSlots.filter(s => s.turma_id === turma.id);
+
+                let rowsHtml = '';
+                HORARIOS_AULAS.forEach(h => {
+                    if (h.intervalo) {
+                        rowsHtml += `
+                            <tr class="timetable-interval-row">
+                                <td class="time-col" style="background:#FEF3C7 !important; color:#B45309;">${h.hora}</td>
+                                <td colspan="5" style="text-align:center; font-weight:800; color:#B45309; letter-spacing:0.5px;">☕ ${h.label}</td>
+                            </tr>
+                        `;
+                    } else {
+                        let colsHtml = `<td class="time-col"><strong>${h.label}</strong><br><span style="font-size:10px; font-weight:600; color:#94A3B8;">${h.hora}</span></td>`;
+                        for (let dia = 0; dia < 5; dia++) {
+                            const slot = gradeTurma.find(s => s.posicao_x === dia && s.posicao_y === h.aula);
+                            const disc = slot ? disciplinas.find(d => d.id === slot.disciplina_id) : null;
+                            const prof = slot ? professores.find(p => p.id === slot.professor_id) : null;
+
+                            if (disc) {
+                                colsHtml += `
+                                    <td>
+                                        <div class="timetable-dropzone" 
+                                             ondragover="window.allowDropTimetable(event)" 
+                                             ondragleave="window.dragLeaveTimetable(event)" 
+                                             ondrop="window.dropOnTimetable(event, ${dia}, ${h.aula})">
+                                            <div class="timetable-slot-card" style="border-left-color:${disc.cor || 'var(--rodin-orange)'};">
+                                                <button type="button" class="timetable-slot-remove" onclick="window.removerSlotGrade(${dia}, ${h.aula})" title="Remover aula">&times;</button>
+                                                <strong>${disc.nome}</strong>
+                                                <span>${prof ? prof.nome.split(' ')[0] : ''}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                `;
+                            } else {
+                                colsHtml += `
+                                    <td>
+                                        <div class="timetable-dropzone" 
+                                             ondragover="window.allowDropTimetable(event)" 
+                                             ondragleave="window.dragLeaveTimetable(event)" 
+                                             ondrop="window.dropOnTimetable(event, ${dia}, ${h.aula})">
+                                            <span style="font-size:10px; color:#CBD5E1; font-weight:700;">+ Horário</span>
+                                        </div>
+                                    </td>
+                                `;
+                            }
+                        }
+                        rowsHtml += `<tr>${colsHtml}</tr>`;
+                    }
+                });
+
+                tbody.innerHTML = rowsHtml;
+            }
+        };
+
+        window.dragStartDisciplina = function(e, discId, profId) {
+            e.dataTransfer.setData('text/plain', JSON.stringify({
+                tipo: 'disciplina',
+                disciplinaId: discId,
+                professorId: profId
+            }));
+        };
+
+        window.allowDropTimetable = function(e) {
+            e.preventDefault();
+            const zone = e.currentTarget;
+            if (zone) zone.classList.add('drag-over');
+        };
+
+        window.dragLeaveTimetable = function(e) {
+            const zone = e.currentTarget;
+            if (zone) zone.classList.remove('drag-over');
+        };
+
+        window.dropOnTimetable = function(e, dia, aula) {
+            e.preventDefault();
+            const zone = e.currentTarget;
+            if (zone) zone.classList.remove('drag-over');
+
+            const turma = window.obterTurmaAtivaSetup();
+            if (!turma) return;
+
+            let data;
+            try {
+                data = JSON.parse(e.dataTransfer.getData('text/plain'));
+            } catch(err) { return; }
+
+            if (!data || !data.disciplinaId) return;
+
+            if (!window.db.grade_slots) window.db.grade_slots = [];
+
+            window.db.grade_slots = window.db.grade_slots.filter(s => !(s.turma_id === turma.id && s.posicao_x === dia && s.posicao_y === aula));
+            window.db.grade_slots.push({
+                id: `g_slot_${turma.id}_${dia}_${aula}`,
+                turma_id: turma.id,
+                disciplina_id: data.disciplinaId,
+                professor_id: data.professorId || null,
+                posicao_x: dia,
+                posicao_y: aula,
+                updated_at: new Date().toISOString()
+            });
+
+            window.safeSetLocalStorage('rodin_grade_slots', window.db.grade_slots);
+            window.renderizarGradeHorariaSetup();
+        };
+
+        window.removerSlotGrade = function(dia, aula) {
+            const turma = window.obterTurmaAtivaSetup();
+            if (!turma || !window.db.grade_slots) return;
+
+            window.db.grade_slots = window.db.grade_slots.filter(s => !(s.turma_id === turma.id && s.posicao_x === dia && s.posicao_y === aula));
+            window.safeSetLocalStorage('rodin_grade_slots', window.db.grade_slots);
+            window.renderizarGradeHorariaSetup();
+        };
+
+        window.limparGradeSetup = function() {
+            const turma = window.obterTurmaAtivaSetup();
+            if (!turma || !window.db.grade_slots) return;
+
+            if (!confirm(`Deseja realmente limpar toda a grade horária semanal da turma ${turma.nome}?`)) return;
+
+            window.db.grade_slots = window.db.grade_slots.filter(s => s.turma_id !== turma.id);
+            window.safeSetLocalStorage('rodin_grade_slots', window.db.grade_slots);
+            window.renderizarGradeHorariaSetup();
+        };
+
+        // ============================================================
+        // SALVAMENTO NO SUPABASE
+        // ============================================================
+        window.salvarSetupTurma = async function() {
+            const turma = window.obterTurmaAtivaSetup();
+            if (!turma) {
+                alert("Nenhuma turma selecionada.");
+                return;
+            }
+
+            const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;
+            
+            // 1. Salvar config_mapa da turma no local e Supabase
+            window.safeSetLocalStorage('rodin_turmas', window.db.turmas);
+            window.safeSetLocalStorage('rodin_mapa_slots', window.db.mapa_slots);
+            window.safeSetLocalStorage('rodin_grade_slots', window.db.grade_slots);
+
+            if (sbClient && typeof sbClient.from === 'function') {
+                try {
+                    // Atualizar config_mapa da turma
+                    await sbClient.from('turmas').update({
+                        config_mapa: turma.config_mapa
+                    }).eq('id', turma.id);
+
+                    // Sincronizar mapa_sala_slots da turma
+                    const slotsTurma = (window.db.mapa_slots || []).filter(s => s.turma_id === turma.id);
+                    await sbClient.from('mapa_sala_slots').delete().eq('turma_id', turma.id);
+                    if (slotsTurma.length > 0) {
+                        await sbClient.from('mapa_sala_slots').insert(slotsTurma.map(s => ({
+                            id: s.id,
+                            turma_id: s.turma_id,
+                            aluno_id: s.aluno_id,
+                            posicao_x: s.posicao_x,
+                            posicao_y: s.posicao_y
+                        })));
+                    }
+
+                    // Sincronizar grade_horaria_slots da turma
+                    const gradeTurma = (window.db.grade_slots || []).filter(s => s.turma_id === turma.id);
+                    await sbClient.from('grade_horaria_slots').delete().eq('turma_id', turma.id);
+                    if (gradeTurma.length > 0) {
+                        await sbClient.from('grade_horaria_slots').insert(gradeTurma.map(s => ({
+                            id: s.id,
+                            turma_id: s.turma_id,
+                            disciplina_id: s.disciplina_id,
+                            professor_id: s.professor_id,
+                            posicao_x: s.posicao_x,
+                            posicao_y: s.posicao_y
+                        })));
+                    }
+                } catch(err) {
+                    console.warn("Aviso ao salvar no Supabase:", err);
+                }
+            }
+
+            if (typeof mostrarSnackbar === 'function') {
+                mostrarSnackbar(`Setup da turma ${turma.nome} salvo com sucesso!`);
+            } else {
+                alert(`Setup da turma ${turma.nome} salvo com sucesso!`);
+            }
+        };
+        var salvarSetupTurma = window.salvarSetupTurma;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (typeof renderizarSidebarModelo === 'function') renderizarSidebarModelo('setup-turma');
+            if (typeof carregarSetupTurma === 'function') carregarSetupTurma();
+
+            if (typeof window.sincronizarBancoComSupabase === 'function') {
+                await window.sincronizarBancoComSupabase();
+            }
+
+            if (typeof carregarSetupTurma === 'function') carregarSetupTurma();
         });
     </script>
 </body>

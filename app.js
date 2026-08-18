@@ -5214,3 +5214,72 @@ async function excluirDisciplina(discId) {
     if (typeof mostrarSnackbar === 'function') mostrarSnackbar(`Disciplina '${disc ? disc.nome : ''}' excluída!`);
 }
 window.excluirDisciplina = excluirDisciplina;
+
+// ============================================================
+// 5. SETUP DE TURMA (MAPA DE CARTEIRAS E GRADE HORÁRIA)
+// ============================================================
+if (typeof window.alternarSubAbaSetup === 'undefined') {
+    window.alternarSubAbaSetup = function(subTab) {
+        const btnMapa = document.getElementById('btn-setup-tab-mapa');
+        const btnGrade = document.getElementById('btn-setup-tab-grade');
+        const panelMapa = document.getElementById('setup-subview-mapa');
+        const panelGrade = document.getElementById('setup-subview-grade');
+
+        if (subTab === 'mapa') {
+            if (btnMapa) btnMapa.classList.add('active');
+            if (btnGrade) btnGrade.classList.remove('active');
+            if (panelMapa) {
+                panelMapa.classList.add('active');
+                panelMapa.style.display = 'block';
+            }
+            if (panelGrade) {
+                panelGrade.classList.remove('active');
+                panelGrade.style.display = 'none';
+            }
+        } else {
+            if (btnGrade) btnGrade.classList.add('active');
+            if (btnMapa) btnMapa.classList.remove('active');
+            if (panelGrade) {
+                panelGrade.classList.add('active');
+                panelGrade.style.display = 'block';
+            }
+            if (panelMapa) {
+                panelMapa.classList.remove('active');
+                panelMapa.style.display = 'none';
+            }
+        }
+    };
+}
+var alternarSubAbaSetup = window.alternarSubAbaSetup;
+
+if (typeof window.carregarSetupTurma === 'undefined') {
+    window.carregarSetupTurma = function(turmaId) {
+        const sel = document.getElementById('setup-turma-select');
+        let turmas = (window.db && window.db.turmas && window.db.turmas.length > 0)
+            ? window.db.turmas
+            : [];
+        if (turmas.length === 0) {
+            try {
+                const raw = localStorage.getItem('rodin_turmas');
+                if (raw) turmas = JSON.parse(raw);
+            } catch(e){}
+        }
+        const turmasOrdenadas = window.ordenarTurmas ? window.ordenarTurmas(turmas) : turmas;
+
+        if (sel && turmasOrdenadas.length > 0) {
+            const valorAtual = turmaId || sel.value || turmasOrdenadas[0].id;
+            sel.innerHTML = turmasOrdenadas.map(t => `<option value="${t.id}">${t.nome}</option>`).join('');
+            if (turmasOrdenadas.some(t => t.id === valorAtual)) {
+                sel.value = valorAtual;
+            } else {
+                sel.value = turmasOrdenadas[0].id;
+            }
+        }
+
+        if (typeof window.renderizarAlunosPaletteSetup === 'function') window.renderizarAlunosPaletteSetup();
+        if (typeof window.renderizarGridCarteirasSetup === 'function') window.renderizarGridCarteirasSetup();
+        if (typeof window.renderizarGradeHorariaSetup === 'function') window.renderizarGradeHorariaSetup();
+    };
+}
+var carregarSetupTurma = window.carregarSetupTurma;
+
