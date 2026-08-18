@@ -654,11 +654,46 @@
             const disciplinas = (window.db && window.db.disciplinas) ? window.db.disciplinas : [];
             const professores = (window.db && window.db.professores) ? window.db.professores : [];
 
+            const MAPA_DISC_PROF = {
+                'Matemática': 'Diego',
+                'História': 'Ricardo',
+                'Geografia': 'Mário',
+                'Ciências': 'Dani Reis',
+                'Ciências Físicas e Biológicas': 'Dani Reis',
+                'Ciências Sociais': 'Ricardo',
+                'Ciência e Tecnologia Aplicadas ao Cotidiano': 'Dani / Luana',
+                'Ciê. Aplicada': 'Dani / Luana',
+                'Robótica e IA': 'Marcelo Canela',
+                'Língua Portuguesa - Leitura e Gramática': 'Rita',
+                'Leit. e Gramática': 'Rita',
+                'Língua Portuguesa - Redação': 'Karen',
+                'Redação': 'Karen',
+                'Língua Inglesa - Programa Bilíngue': 'Renatinha',
+                'Inglês - CLIL': 'Renatinha',
+                'Inglês - Language': 'Valeska',
+                'Laboratório de Inteligência Emocional': 'Monique',
+                'Lab. Intel. Emoc.': 'Monique',
+                'Arte-Dança': 'Alice',
+                'Arte - Dança': 'Alice',
+                'Arte-Visual': 'Márcia',
+                'Arte - Visual': 'Márcia',
+                'Arte-Música': 'Alice',
+                'Arte-Teatro': 'Márcia',
+                'Educação Física': 'Pavarina',
+                'Ed. Física': 'Pavarina',
+                'PD': 'Diego / Coordenação',
+                'Hist. / Geo.*': 'Ricardo / Mário*',
+                'Atualidades / Século XXI': 'Ricardo'
+            };
+
             // Renderizar paleta de disciplinas
             if (palette) {
                 palette.innerHTML = disciplinas.map(d => {
-                    const prof = professores.find(p => p.disciplina === d.nome);
-                    const profNome = prof ? prof.nome : 'Professor(a)';
+                    let prof = professores.find(p => p.disciplina === d.nome || (p.disciplinas && p.disciplinas.includes(d.nome)));
+                    let profNome = prof ? prof.nome : (MAPA_DISC_PROF[d.nome] || '');
+                    if (!prof && profNome) {
+                        prof = professores.find(p => p.nome === profNome);
+                    }
                     return `
                         <div class="draggable-disc-chip" 
                              draggable="true" 
@@ -668,7 +703,7 @@
                                 <span style="width:10px; height:10px; border-radius:50%; background:${d.cor || 'var(--rodin-orange)'}; flex-shrink:0;"></span>
                                 <div style="min-width:0;">
                                     <strong style="font-size:12px; color:var(--rodin-graphite); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${d.nome}</strong>
-                                    <span style="font-size:10px; color:var(--rodin-cool-gray);">${profNome}</span>
+                                    <span style="font-size:10px; color:var(--rodin-cool-gray);">${profNome || 'Docente'}</span>
                                 </div>
                             </div>
                             <i class="ph-bold ph-dots-six-vertical" style="color:#CBD5E1; font-size:16px;"></i>
