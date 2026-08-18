@@ -160,50 +160,59 @@ function carregarPerfilUsuario() {
     if (elCargo) elCargo.innerText = usr.cargo;
 }
 
-if (!window.ordenarTurmas) {
-    window.ordenarTurmas = function(turmasList) {
-        if (!Array.isArray(turmasList)) return [];
+window.ordenarTurmas = function(turmasList) {
+    if (!Array.isArray(turmasList)) return [];
 
-        function extrairInfoTurma(t) {
-            const nome = typeof t === 'string' ? t : (t.nome || '');
-            const nLower = nome.toLowerCase().trim()
-                .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const vistos = new Set();
+    const turmasUnicas = [];
+    turmasList.forEach(t => {
+        if (!t) return;
+        const nomeChave = (t.nome || t.id || '').trim().toLowerCase();
+        if (nomeChave && !vistos.has(nomeChave)) {
+            vistos.add(nomeChave);
+            turmasUnicas.push(t);
+        }
+    });
 
-            let pesoSerie = 99;
+    function extrairInfoTurma(t) {
+        const nome = typeof t === 'string' ? t : (t.nome || '');
+        const nLower = nome.toLowerCase().trim()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-            if (nLower.includes('ppv') || nLower.includes('vestibular')) {
-                pesoSerie = 14;
-            } else if (nLower.includes('6')) {
-                pesoSerie = 6;
-            } else if (nLower.includes('7')) {
-                pesoSerie = 7;
-            } else if (nLower.includes('8')) {
-                pesoSerie = 8;
-            } else if (nLower.includes('9')) {
-                pesoSerie = 9;
-            } else if (nLower.includes('1') || nLower.includes('primeir')) {
-                pesoSerie = 10;
-            } else if (nLower.includes('2') || nLower.includes('segund')) {
-                pesoSerie = 11;
-            } else if (nLower.includes('3') || nLower.includes('terceir')) {
-                pesoSerie = 12;
-            }
+        let pesoSerie = 99;
 
-            return { nome, pesoSerie };
+        if (nLower.includes('ppv') || nLower.includes('vestibular')) {
+            pesoSerie = 14;
+        } else if (nLower.includes('6')) {
+            pesoSerie = 6;
+        } else if (nLower.includes('7')) {
+            pesoSerie = 7;
+        } else if (nLower.includes('8')) {
+            pesoSerie = 8;
+        } else if (nLower.includes('9')) {
+            pesoSerie = 9;
+        } else if (nLower.includes('1') || nLower.includes('primeir')) {
+            pesoSerie = 10;
+        } else if (nLower.includes('2') || nLower.includes('segund')) {
+            pesoSerie = 11;
+        } else if (nLower.includes('3') || nLower.includes('terceir')) {
+            pesoSerie = 12;
         }
 
-        return [...turmasList].sort((a, b) => {
-            const infoA = extrairInfoTurma(a);
-            const infoB = extrairInfoTurma(b);
+        return { nome, pesoSerie };
+    }
 
-            if (infoA.pesoSerie !== infoB.pesoSerie) {
-                return infoA.pesoSerie - infoB.pesoSerie;
-            }
+    return [...turmasUnicas].sort((a, b) => {
+        const infoA = extrairInfoTurma(a);
+        const infoB = extrairInfoTurma(b);
 
-            return infoA.nome.localeCompare(infoB.nome, 'pt-BR', { numeric: true, sensitivity: 'base' });
-        });
-    };
-}
+        if (infoA.pesoSerie !== infoB.pesoSerie) {
+            return infoA.pesoSerie - infoB.pesoSerie;
+        }
+
+        return infoA.nome.localeCompare(infoB.nome, 'pt-BR', { numeric: true, sensitivity: 'base' });
+    });
+};
 
 function obterTurmasPermitidasUsuario() {
     const usr = obterUsuarioLogado();

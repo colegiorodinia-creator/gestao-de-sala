@@ -166,6 +166,61 @@ window.empacotarPermissoesESenhaUsuario = function(turmas, senha) {
 };
 var empacotarPermissoesESenhaUsuario = window.empacotarPermissoesESenhaUsuario;
 
+window.ordenarTurmas = function(turmasList) {
+    if (!Array.isArray(turmasList)) return [];
+
+    const vistos = new Set();
+    const turmasUnicas = [];
+    turmasList.forEach(t => {
+        if (!t) return;
+        const nomeChave = (t.nome || t.id || '').trim().toLowerCase();
+        if (nomeChave && !vistos.has(nomeChave)) {
+            vistos.add(nomeChave);
+            turmasUnicas.push(t);
+        }
+    });
+
+    function extrairInfoTurma(t) {
+        const nome = typeof t === 'string' ? t : (t.nome || '');
+        const nLower = nome.toLowerCase().trim()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+        let pesoSerie = 99;
+
+        if (nLower.includes('ppv') || nLower.includes('vestibular')) {
+            pesoSerie = 14;
+        } else if (nLower.includes('6')) {
+            pesoSerie = 6;
+        } else if (nLower.includes('7')) {
+            pesoSerie = 7;
+        } else if (nLower.includes('8')) {
+            pesoSerie = 8;
+        } else if (nLower.includes('9')) {
+            pesoSerie = 9;
+        } else if (nLower.includes('1') || nLower.includes('primeir')) {
+            pesoSerie = 10;
+        } else if (nLower.includes('2') || nLower.includes('segund')) {
+            pesoSerie = 11;
+        } else if (nLower.includes('3') || nLower.includes('terceir')) {
+            pesoSerie = 12;
+        }
+
+        return { nome, pesoSerie };
+    }
+
+    return [...turmasUnicas].sort((a, b) => {
+        const infoA = extrairInfoTurma(a);
+        const infoB = extrairInfoTurma(b);
+
+        if (infoA.pesoSerie !== infoB.pesoSerie) {
+            return infoA.pesoSerie - infoB.pesoSerie;
+        }
+
+        return infoA.nome.localeCompare(infoB.nome, 'pt-BR', { numeric: true, sensitivity: 'base' });
+    });
+};
+var ordenarTurmas = window.ordenarTurmas;
+
 window.obterUsuarioLogado = function() {
     try {
         const sessao = localStorage.getItem('rodin_active_session');

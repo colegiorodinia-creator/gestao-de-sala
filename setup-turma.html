@@ -284,7 +284,7 @@
         };
 
         window.obterAlunosTurmaSetup = function(turma) {
-            if (!turma) return [];
+            if (!turma || !turma.id) return [];
             let todosAlunos = (window.db && window.db.alunos && window.db.alunos.length > 0)
                 ? window.db.alunos
                 : [];
@@ -295,15 +295,20 @@
                 } catch(e){}
             }
 
-            const tNome = (turma.nome || '').toLowerCase();
-            const tSlug = (turma.slug || '').toLowerCase();
-            const tId = (turma.id || '').toLowerCase();
+            const tId = String(turma.id).trim();
+            const tSlug = String(turma.slug || '').trim().toLowerCase();
+            const tNome = String(turma.nome || '').trim().toLowerCase();
+            const is6AnoA = (tId === 't1' || tSlug === '6o-ano-a' || tSlug === '6-ano-a' || tNome === '6º ano a' || tNome === '6o ano a');
 
             return todosAlunos.filter(a => {
-                const aTurma = (a.turma_id || '').toLowerCase();
-                if (aTurma === tId || aTurma === tSlug || aTurma === tNome) return true;
-                // Correspondência flexível para 6º Ano A
-                if ((tNome.includes('6') && tNome.includes('a')) && (aTurma === 't1' || aTurma === 'turma_6anoa' || (a.id && a.id.startsWith('aluno_6a_')))) {
+                if (!a.turma_id) return false;
+                const aTurmaId = String(a.turma_id).trim();
+                const aTurmaLower = aTurmaId.toLowerCase();
+
+                if (aTurmaId === tId) return true;
+                if (tSlug && aTurmaLower === tSlug) return true;
+                if (aTurmaLower === tNome) return true;
+                if (is6AnoA && (aTurmaId === 't1' || aTurmaLower === 'turma_6anoa' || aTurmaLower === '6-ano-a' || (a.id && a.id.startsWith('aluno_6a_')))) {
                     return true;
                 }
                 return false;
@@ -354,31 +359,47 @@
         var carregarSetupTurma = window.carregarSetupTurma;
 
         window.obterSlotsTurmaSetup = function(turma) {
-            if (!turma) return [];
+            if (!turma || !turma.id) return [];
             const slots = (window.db && window.db.mapa_slots) ? window.db.mapa_slots : [];
-            const tId = (turma.id || '').toLowerCase();
-            const tSlug = (turma.slug || '').toLowerCase();
-            const tNome = (turma.nome || '').toLowerCase();
+            const tId = String(turma.id).trim();
+            const tSlug = String(turma.slug || '').trim().toLowerCase();
+            const tNome = String(turma.nome || '').trim().toLowerCase();
+            const is6AnoA = (tId === 't1' || tSlug === '6o-ano-a' || tSlug === '6-ano-a' || tNome === '6º ano a' || tNome === '6o ano a');
 
             return slots.filter(s => {
-                const sTurma = (s.turma_id || '').toLowerCase();
-                if (sTurma === tId || sTurma === tSlug || sTurma === tNome) return true;
-                if ((tNome.includes('6') && tNome.includes('a')) && sTurma === 't1') return true;
+                if (!s.turma_id) return false;
+                const sTurmaId = String(s.turma_id).trim();
+                const sTurmaLower = sTurmaId.toLowerCase();
+
+                if (sTurmaId === tId) return true;
+                if (tSlug && sTurmaLower === tSlug) return true;
+                if (sTurmaLower === tNome) return true;
+                if (is6AnoA && (sTurmaId === 't1' || sTurmaLower === 'turma_6anoa' || sTurmaLower === '6-ano-a')) {
+                    return true;
+                }
                 return false;
             });
         };
 
         window.obterGradeTurmaSetup = function(turma) {
-            if (!turma) return [];
+            if (!turma || !turma.id) return [];
             const slots = (window.db && window.db.grade_slots) ? window.db.grade_slots : [];
-            const tId = (turma.id || '').toLowerCase();
-            const tSlug = (turma.slug || '').toLowerCase();
-            const tNome = (turma.nome || '').toLowerCase();
+            const tId = String(turma.id).trim();
+            const tSlug = String(turma.slug || '').trim().toLowerCase();
+            const tNome = String(turma.nome || '').trim().toLowerCase();
+            const is6AnoA = (tId === 't1' || tSlug === '6o-ano-a' || tSlug === '6-ano-a' || tNome === '6º ano a' || tNome === '6o ano a');
 
             return slots.filter(s => {
-                const sTurma = (s.turma_id || '').toLowerCase();
-                if (sTurma === tId || sTurma === tSlug || sTurma === tNome) return true;
-                if ((tNome.includes('6') && tNome.includes('a')) && sTurma === 't1') return true;
+                if (!s.turma_id) return false;
+                const sTurmaId = String(s.turma_id).trim();
+                const sTurmaLower = sTurmaId.toLowerCase();
+
+                if (sTurmaId === tId) return true;
+                if (tSlug && sTurmaLower === tSlug) return true;
+                if (sTurmaLower === tNome) return true;
+                if (is6AnoA && (sTurmaId === 't1' || sTurmaLower === 'turma_6anoa' || sTurmaLower === '6-ano-a')) {
+                    return true;
+                }
                 return false;
             });
         };
