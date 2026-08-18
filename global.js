@@ -313,12 +313,6 @@ window.sincronizarBancoComSupabase = async function() {
     }
 };
 
-        document.dispatchEvent(new CustomEvent('rodin_db_synced', { detail: window.db }));
-    } catch (err) {
-        console.warn("Aviso na sincronização do Supabase:", err);
-    }
-};
-
 // 2.1 SALVAMENTO E SINCRONIZAÇÃO DE BIOMETRIA FACIAL NO SUPABASE (STORAGE + DATABASE)
 window.salvarBiometriaProfessorSupabase = async function(profId, resultado) {
     if (!profId || !resultado || !resultado.descriptors || resultado.descriptors.length === 0) return false;

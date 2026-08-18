@@ -353,6 +353,36 @@
         };
         var carregarSetupTurma = window.carregarSetupTurma;
 
+        window.obterSlotsTurmaSetup = function(turma) {
+            if (!turma) return [];
+            const slots = (window.db && window.db.mapa_slots) ? window.db.mapa_slots : [];
+            const tId = (turma.id || '').toLowerCase();
+            const tSlug = (turma.slug || '').toLowerCase();
+            const tNome = (turma.nome || '').toLowerCase();
+
+            return slots.filter(s => {
+                const sTurma = (s.turma_id || '').toLowerCase();
+                if (sTurma === tId || sTurma === tSlug || sTurma === tNome) return true;
+                if ((tNome.includes('6') && tNome.includes('a')) && sTurma === 't1') return true;
+                return false;
+            });
+        };
+
+        window.obterGradeTurmaSetup = function(turma) {
+            if (!turma) return [];
+            const slots = (window.db && window.db.grade_slots) ? window.db.grade_slots : [];
+            const tId = (turma.id || '').toLowerCase();
+            const tSlug = (turma.slug || '').toLowerCase();
+            const tNome = (turma.nome || '').toLowerCase();
+
+            return slots.filter(s => {
+                const sTurma = (s.turma_id || '').toLowerCase();
+                if (sTurma === tId || sTurma === tSlug || sTurma === tNome) return true;
+                if ((tNome.includes('6') && tNome.includes('a')) && sTurma === 't1') return true;
+                return false;
+            });
+        };
+
         window.renderizarAlunosPaletteSetup = function() {
             const turma = window.obterTurmaAtivaSetup();
             if (!turma) return;
@@ -363,8 +393,7 @@
             const busca = inputBusca ? inputBusca.value.trim().toLowerCase() : '';
 
             const alunosTurma = window.obterAlunosTurmaSetup(turma);
-            const slots = (window.db && window.db.mapa_slots) ? window.db.mapa_slots : [];
-            const slotsTurma = slots.filter(s => s.turma_id === turma.id && s.aluno_id);
+            const slotsTurma = window.obterSlotsTurmaSetup(turma).filter(s => s.aluno_id);
             const setAlocados = new Set(slotsTurma.map(s => s.aluno_id));
 
             if (elContador) {
@@ -420,8 +449,7 @@
             container.style.gap = '12px';
             container.style.width = '100%';
 
-            const slots = (window.db && window.db.mapa_slots) ? window.db.mapa_slots : [];
-            const slotsTurma = slots.filter(s => s.turma_id === turma.id);
+            const slotsTurma = window.obterSlotsTurmaSetup(turma);
             const alunos = (window.db && window.db.alunos) ? window.db.alunos : [];
 
             let html = '';
@@ -651,8 +679,7 @@
 
             // Renderizar tabela semanal
             if (tbody) {
-                const gradeSlots = (window.db && window.db.grade_slots) ? window.db.grade_slots : [];
-                const gradeTurma = gradeSlots.filter(s => s.turma_id === turma.id);
+                const gradeTurma = window.obterGradeTurmaSetup(turma);
 
                 let rowsHtml = '';
                 HORARIOS_AULAS.forEach(h => {
