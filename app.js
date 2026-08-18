@@ -5037,7 +5037,7 @@ async function cadastrarDisciplina(e) {
     const etapaEl = document.getElementById('cad-disc-etapa');
 
     const nome = nomeEl ? nomeEl.value.trim() : '';
-    const etapa = etapaEl ? etapaEl.value : 'Todas as Etapas';
+    const etapa = etapaEl ? etapaEl.value : 'Ensino Fundamental Anos Finais';
 
     if (!nome) {
         alert("Preencha o nome da disciplina.");
@@ -5049,7 +5049,8 @@ async function cadastrarDisciplina(e) {
     const novaDisc = {
         id: `disc_${Date.now()}`,
         nome: nome,
-        etapa: etapa
+        etapa: etapa,
+        cor: '#F45206'
     };
 
     db.disciplinas.push(novaDisc);
@@ -5061,7 +5062,7 @@ async function cadastrarDisciplina(e) {
             await sbClient.from('disciplinas').insert([{
                 id: novaDisc.id,
                 nome: novaDisc.nome,
-                etapa: novaDisc.etapa
+                cor: novaDisc.cor
             }]);
         } catch(err){}
     }
@@ -5070,35 +5071,121 @@ async function cadastrarDisciplina(e) {
     if (formEl) formEl.reset();
 
     renderizarListaDisciplinasCadastradas();
+    if (typeof window.atualizarDisciplinasPorEtapa === 'function') {
+        window.atualizarDisciplinasPorEtapa();
+    }
     if (typeof mostrarSnackbar === 'function') mostrarSnackbar(`Disciplina '${nome}' cadastrada!`);
     return false;
 }
 window.cadastrarDisciplina = cadastrarDisciplina;
 
+function abrirModalEditarDisciplina(discId) {
+    const disciplinas = (window.db && window.db.disciplinas) ? window.db.disciplinas : (db.disciplinas || []);
+    const disc = disciplinas.find(d => d.id === discId);
+    if (!disc) return;
+
+    const modal = document.getElementById('modal-editar-disciplina');
+    if (!modal) return;
+
+    const idInput = document.getElementById('edit-disc-id');
+    const nomeInput = document.getElementById('edit-disc-nome');
+    const etapaSelect = document.getElementById('edit-disc-etapa');
+
+    if (idInput) idInput.value = disc.id;
+    if (nomeInput) nomeInput.value = disc.nome || '';
+    if (etapaSelect) etapaSelect.value = disc.etapa || 'Ensino Fundamental Anos Finais';
+
+    modal.style.display = 'flex';
+}
+window.abrirModalEditarDisciplina = abrirModalEditarDisciplina;
+
+function fecharModalEditarDisciplina() {
+    const modal = document.getElementById('modal-editar-disciplina');
+    if (modal) modal.style.display = 'none';
+}
+window.fecharModalEditarDisciplina = fecharModalEditarDisciplina;
+
+async function salvarEdicaoDisciplina(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    const discId = document.getElementById('edit-disc-id')?.value;
+    const nome = document.getElementById('edit-disc-nome')?.value.trim();
+    const etapa = document.getElementById('edit-disc-etapa')?.value || 'Ensino Fundamental Anos Finais';
+
+    if (!nome) {
+        alert("Preencha o nome da disciplina.");
+        return false;
+    }
+
+    const disciplinas = window.db?.disciplinas || db.disciplinas || [];
+    const index = disciplinas.findIndex(d => d.id === discId);
+    if (index === -1) return false;
+
+    const nomeAntigo = disciplinas[index].nome;
+    disciplinas[index].nome = nome;
+    disciplinas[index].etapa = etapa;
+
+    if (window.db?.professores) {
+        window.db.professores.forEach(p => {
+            if (p.disciplina === nomeAntigo) {
+                p.disciplina = nome;
+            }
+        });
+        window.safeSetLocalStorage('rodin_professores', window.db.professores);
+    }
+
+    window.safeSetLocalStorage('rodin_disciplinas', disciplinas);
+
+    const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;
+    if (sbClient && typeof sbClient.from === 'function') {
+        try {
+            await sbClient.from('disciplinas').update({
+                nome: nome
+            }).eq('id', discId);
+        } catch(err) {
+            console.warn("Erro ao salvar disciplina no Supabase:", err);
+        }
+    }
+
+    fecharModalEditarDisciplina();
+    renderizarListaDisciplinasCadastradas();
+    if (typeof window.atualizarDisciplinasPorEtapa === 'function') {
+        window.atualizarDisciplinasPorEtapa();
+    }
+    if (typeof mostrarSnackbar === 'function') mostrarSnackbar(`Disciplina '${nome}' atualizada com sucesso!`);
+    return false;
+}
+window.salvarEdicaoDisciplina = salvarEdicaoDisciplina;
+
 function renderizarListaDisciplinasCadastradas() {
     const container = document.getElementById('lista-disciplinas-cadastradas');
     if (!container) return;
 
-    if (!db.disciplinas) db.disciplinas = [];
+    const disciplinas = (window.db && window.db.disciplinas) ? window.db.disciplinas : (db.disciplinas || []);
 
-    if (db.disciplinas.length === 0) {
+    if (disciplinas.length === 0) {
         container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--rodin-cool-gray); font-size:13px;">Nenhuma disciplina cadastrada.</div>`;
         return;
     }
 
-    container.innerHTML = db.disciplinas.map(d => {
+    container.innerHTML = disciplinas.map(d => {
+        const etapaFormatada = d.etapa || 'Ensino Fundamental Anos Finais';
         return `
-            <div style="display:flex; justify-content:space-between; align-items:center; background:#F8FAFC; padding:10px 14px; border-radius:12px; border:1px solid var(--rodin-line);">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <i class="ph-bold ph-book" style="color:var(--rodin-orange); font-size:20px;"></i>
-                    <div>
-                        <strong style="font-size:13px; color:var(--rodin-graphite); display:block;">${d.nome}</strong>
-                        <div style="font-size:11px; color:var(--rodin-cool-gray); font-weight:600;">${d.etapa}</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#F8FAFC; padding:10px 14px; border-radius:12px; border:1px solid var(--rodin-line); gap:12px;">
+                <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                    <i class="ph-bold ph-book" style="color:var(--rodin-orange); font-size:20px; flex-shrink:0;"></i>
+                    <div style="min-width:0;">
+                        <strong style="font-size:13px; color:var(--rodin-graphite); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${d.nome}</strong>
+                        <div style="font-size:11px; color:var(--rodin-cool-gray); font-weight:600;">${etapaFormatada}</div>
                     </div>
                 </div>
-                <button class="btn-reset-pink" onclick="excluirDisciplina('${d.id}')" style="padding:6px 12px; font-size:11px;">
-                    <i class="ph-bold ph-trash"></i> Excluir
-                </button>
+                <div style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
+                    <button type="button" class="btn-primary-rodin" onclick="abrirModalEditarDisciplina('${d.id}')" title="Editar Disciplina" style="background:#475569; color:#FFF; font-size:11px; padding:6px 12px; border-radius:8px; gap:4px; cursor:pointer;">
+                        <i class="ph-bold ph-pencil-line"></i> Editar
+                    </button>
+                    <button type="button" class="btn-reset-pink" onclick="excluirDisciplina('${d.id}')" title="Excluir Disciplina" style="padding:6px 10px; font-size:11px; cursor:pointer;">
+                        <i class="ph-bold ph-trash"></i> Excluir
+                    </button>
+                </div>
             </div>
         `;
     }).join('');
@@ -5106,10 +5193,12 @@ function renderizarListaDisciplinasCadastradas() {
 window.renderizarListaDisciplinasCadastradas = renderizarListaDisciplinasCadastradas;
 
 async function excluirDisciplina(discId) {
-    if (!db.disciplinas) db.disciplinas = [];
-    const disc = db.disciplinas.find(d => d.id === discId);
-    db.disciplinas = db.disciplinas.filter(d => d.id !== discId);
-    window.safeSetLocalStorage('rodin_disciplinas', db.disciplinas);
+    const disciplinas = (window.db && window.db.disciplinas) ? window.db.disciplinas : (db.disciplinas || []);
+    const disc = disciplinas.find(d => d.id === discId);
+    const novasDisciplinas = disciplinas.filter(d => d.id !== discId);
+    if (window.db) window.db.disciplinas = novasDisciplinas;
+    db.disciplinas = novasDisciplinas;
+    window.safeSetLocalStorage('rodin_disciplinas', novasDisciplinas);
 
     const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;
     if (sbClient && typeof sbClient.from === 'function') {
@@ -5119,6 +5208,9 @@ async function excluirDisciplina(discId) {
     }
 
     renderizarListaDisciplinasCadastradas();
+    if (typeof window.atualizarDisciplinasPorEtapa === 'function') {
+        window.atualizarDisciplinasPorEtapa();
+    }
     if (typeof mostrarSnackbar === 'function') mostrarSnackbar(`Disciplina '${disc ? disc.nome : ''}' excluída!`);
 }
 window.excluirDisciplina = excluirDisciplina;

@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS public.professores (
 CREATE TABLE IF NOT EXISTS public.disciplinas (
     id TEXT PRIMARY KEY,
     nome TEXT NOT NULL,
+    etapa TEXT DEFAULT 'Ensino Fundamental Anos Finais',
     cor TEXT DEFAULT '#F45206',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

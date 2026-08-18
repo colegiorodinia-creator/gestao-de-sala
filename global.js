@@ -131,6 +131,15 @@ window.obterListaUsuariosSistema = function() {
 };
 var obterListaUsuariosSistema = window.obterListaUsuariosSistema;
 
+window.salvarListaUsuariosSistema = function(lista) {
+    if (typeof window.safeSetLocalStorage === 'function') {
+        window.safeSetLocalStorage('rodin_usuarios_sistema', lista);
+    } else {
+        localStorage.setItem('rodin_usuarios_sistema', JSON.stringify(lista));
+    }
+};
+var salvarListaUsuariosSistema = window.salvarListaUsuariosSistema;
+
 window.obterPermissoesESenhaUsuario = function(usuario) {
     if (!usuario) return { turmas: 'todas', senha: '' };
     if (typeof usuario.turmas_permitidas === 'string') {
@@ -186,7 +195,17 @@ window.carregarBancoDeDadosLocal = function() {
         if (t) window.db.turmas = JSON.parse(t);
         if (a) window.db.alunos = JSON.parse(a);
         if (p) window.db.professores = JSON.parse(p);
-        if (d) window.db.disciplinas = JSON.parse(d);
+        if (d) {
+            try {
+                const parsedD = JSON.parse(d);
+                if (Array.isArray(parsedD)) {
+                    window.db.disciplinas = parsedD.map(disc => ({
+                        ...disc,
+                        etapa: disc.etapa || 'Ensino Fundamental Anos Finais'
+                    }));
+                }
+            } catch(e) {}
+        }
         if (u) window.db.usuarios_sistema = JSON.parse(u);
         if (o) window.db.ocorrencias = JSON.parse(o);
         else if (!window.db.ocorrencias) window.db.ocorrencias = [];
@@ -238,7 +257,14 @@ window.sincronizarBancoComSupabase = async function() {
         }
 
         if (resDisc && Array.isArray(resDisc.data)) {
-            window.db.disciplinas = resDisc.data;
+            const oldLocalDisc = window.db.disciplinas || [];
+            window.db.disciplinas = resDisc.data.map(d => {
+                const localMatch = oldLocalDisc.find(ld => ld.id === d.id);
+                return {
+                    ...d,
+                    etapa: d.etapa || (localMatch ? localMatch.etapa : null) || 'Ensino Fundamental Anos Finais'
+                };
+            });
             window.safeSetLocalStorage('rodin_disciplinas', window.db.disciplinas);
         }
 

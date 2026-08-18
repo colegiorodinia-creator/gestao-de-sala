@@ -109,11 +109,11 @@
             ];
 
             const disciplinas = [
-                { id: "d1", nome: 'Matemática', cor: '#3B82F6' },
-                { id: "d2", nome: 'Língua Portuguesa', cor: '#F45206' },
-                { id: "d3", nome: 'História', cor: '#8B5CF6' },
-                { id: "d4", nome: 'Geografia', cor: '#10B981' },
-                { id: "d5", nome: 'Ciências', cor: '#06B6D4' }
+                { id: "d1", nome: 'Matemática', etapa: 'Ensino Fundamental Anos Finais', cor: '#3B82F6' },
+                { id: "d2", nome: 'Língua Portuguesa', etapa: 'Ensino Fundamental Anos Finais', cor: '#F45206' },
+                { id: "d3", nome: 'História', etapa: 'Ensino Fundamental Anos Finais', cor: '#8B5CF6' },
+                { id: "d4", nome: 'Geografia', etapa: 'Ensino Fundamental Anos Finais', cor: '#10B981' },
+                { id: "d5", nome: 'Ciências', etapa: 'Ensino Fundamental Anos Finais', cor: '#06B6D4' }
             ];
 
             const professores = [
