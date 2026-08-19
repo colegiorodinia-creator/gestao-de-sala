@@ -106,36 +106,40 @@ const FaceSecurity = {
                 this.stopCamera();
             }
             
+            videoElement.muted = true;
+            videoElement.setAttribute('autoplay', '');
+            videoElement.setAttribute('muted', '');
+            videoElement.setAttribute('playsinline', '');
+
+            let stream = null;
             try {
-                this.mediaStream = await navigator.mediaDevices.getUserMedia({
+                stream = await navigator.mediaDevices.getUserMedia({
                     video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
                     audio: false
                 });
             } catch (constraintErr) {
                 console.warn("⚠️ Restrições ideais falharam, tentando fallback genérico {video: true}...", constraintErr);
-                this.mediaStream = await navigator.mediaDevices.getUserMedia({
+                stream = await navigator.mediaDevices.getUserMedia({
                     video: true,
                     audio: false
                 });
             }
 
-            // Registrar o listener antes de associar o srcObject para evitar race conditions
-            const playPromise = new Promise((resolve) => {
-                const handleMetadata = () => {
-                    videoElement.play().then(resolve).catch(resolve);
-                    videoElement.removeEventListener('loadedmetadata', handleMetadata);
-                };
-                videoElement.addEventListener('loadedmetadata', handleMetadata);
-                
-                // Timeout de segurança de 1.5 segundos para garantir que a promessa sempre resolva
-                setTimeout(() => {
-                    videoElement.play().then(resolve).catch(resolve);
-                    videoElement.removeEventListener('loadedmetadata', handleMetadata);
-                }, 1500);
-            });
+            this.mediaStream = stream;
+            videoElement.srcObject = stream;
 
-            videoElement.srcObject = this.mediaStream;
-            await playPromise;
+            try {
+                await videoElement.play();
+            } catch (playErr) {
+                console.warn("Aguardando loadedmetadata para reproduzir vídeo...", playErr);
+                await new Promise((resolve) => {
+                    videoElement.onloadedmetadata = () => {
+                        videoElement.play().then(resolve).catch(resolve);
+                    };
+                    setTimeout(resolve, 1200);
+                });
+            }
+
             return true;
         } catch (err) {
             console.warn("⚠️ Transmissão de vídeo falhou no acesso à webcam física:", err);

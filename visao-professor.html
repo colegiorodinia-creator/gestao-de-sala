@@ -147,7 +147,7 @@
 
             <!-- Ações Rápidas & Fallback -->
             <div style="display:flex; flex-direction:column; gap:10px; width:100%;">
-                <button type="button" id="btn-face-retry" onclick="iniciarScanBiometricoFacial()" style="display:none; width:100%; justify-content:center; background:var(--rodin-orange, #F45206); color:#FFF; border:none; padding:12px; border-radius:12px; font-size:13px; font-weight:800; cursor:pointer; align-items:center; gap:8px;">
+                <button type="button" id="btn-face-retry" onclick="iniciarScanBiometricoFacial(true)" style="display:none; width:100%; justify-content:center; background:var(--rodin-orange, #F45206); color:#FFF; border:none; padding:12px; border-radius:12px; font-size:13px; font-weight:800; cursor:pointer; align-items:center; gap:8px;">
                     <i class="ph-bold ph-arrows-clockwise" style="font-size:18px;"></i> Tentar Scan Novamente
                 </button>
                 
@@ -465,8 +465,8 @@
             iniciarScanBiometricoFacial();
         };
 
-        window.iniciarScanBiometricoFacial = async function() {
-            if (scanFacialEmProgresso) return;
+        window.iniciarScanBiometricoFacial = async function(isRetry = false) {
+            if (scanFacialEmProgresso && !isRetry) return;
             scanFacialEmProgresso = true;
 
             const video = document.getElementById('video-login-facial');
@@ -491,17 +491,22 @@
                     cameraOk = await FaceSecurity.startCamera(video);
                 } else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                     try {
+                        video.muted = true;
+                        video.setAttribute('playsinline', '');
+                        video.setAttribute('autoplay', '');
                         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
                         video.srcObject = stream;
                         await video.play();
                         cameraOk = true;
-                    } catch(e){}
+                    } catch(e){
+                        console.warn("Falha getUserMedia:", e);
+                    }
                 }
 
                 if (!cameraOk) {
                     if (statusEl) {
                         statusEl.style.color = '#F59E0B';
-                        statusEl.innerText = "Câmera não detectada ou permissão negada. Você pode desbloquear com a senha.";
+                        statusEl.innerHTML = `⚠️ <strong>Permissão de Câmera Necessária</strong><br><span style="font-size:11.5px; opacity:0.9;">Clique no ícone de configurações ao lado do endereço do site para <strong>Permitir a Câmera</strong>, ou entre com a senha.</span>`;
                     }
                     if (box) box.classList.remove('scanning');
                     if (retryBtn) retryBtn.style.display = 'flex';
