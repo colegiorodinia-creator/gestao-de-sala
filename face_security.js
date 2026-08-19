@@ -285,7 +285,7 @@ const FaceSecurity = {
 
         let bestMatch = null;
         let minDistance = 999.0;
-        const threshold = 0.55; // Nível ideal de similaridade para face-api.js
+        const threshold = 0.65; // Nível ideal de similaridade para face-api.js em webcams
 
         for (const prof of professoresComFacial) {
             if (prof.facial_descriptor) {
@@ -308,6 +308,10 @@ const FaceSecurity = {
 
         if (bestMatch && minDistance <= threshold) {
             console.log(`✅ Biometria correspondente a ${bestMatch.nome} (Distância: ${minDistance.toFixed(3)})`);
+            return { success: true, professor: bestMatch, matchDistance: minDistance };
+        } else if (bestMatch && minDistance <= 0.72) {
+            // Correspondência próxima em condições de iluminação variável
+            console.log(`✅ Biometria aceita em tolerância flexível para ${bestMatch.nome} (Distância: ${minDistance.toFixed(3)})`);
             return { success: true, professor: bestMatch, matchDistance: minDistance };
         }
 
