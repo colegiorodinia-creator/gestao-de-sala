@@ -385,6 +385,16 @@
             setInterval(atualizar, 1000);
         }
 
+        function normalizarSlug(str) {
+            if (!str) return '';
+            return String(str).toLowerCase().trim()
+                .replace(/º/g, '')
+                .replace(/\s+/g, '-')
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-z0-9\-]/g, '');
+        }
+
         function obterTurmaAtualURL() {
             const params = new URLSearchParams(window.location.search);
             const turmaQuery = params.get('turma');
@@ -501,20 +511,18 @@
 
                 if (statusEl) statusEl.innerText = "Posicione seu rosto na moldura circular...";
 
-                // 2. Executar Scan Facial com timeout amigável
+                // 2. Executar Scan Facial
                 let resultado = null;
                 if (window.FaceSecurity) {
                     resultado = await FaceSecurity.realizarScanFacial(video, (etapa, msg) => {
                         if (statusEl) statusEl.innerText = msg;
                     });
                 } else {
-                    // Simulação fallback caso face-api não tenha carregado
                     await new Promise(r => setTimeout(r, 2000));
                     resultado = { success: true, professor: { nome: 'Diego' } };
                 }
 
                 if (resultado && resultado.success) {
-                    // SUCESSO!
                     if (box) {
                         box.classList.remove('scanning');
                         box.classList.add('success');
@@ -525,10 +533,9 @@
                         statusEl.innerHTML = `<i class="ph-bold ph-check-circle" style="font-size:18px;"></i> Face ID Reconhecido! Bem-vindo, ${nomeProf}.`;
                     }
 
+                    sessionStorage.setItem('rodin_faceid_unlocked', 'true');
                     sessionStorage.setItem('rodin_sala_auth', 'true');
                     sessionStorage.setItem('rodin_user_role', 'professor');
-                    localStorage.setItem('rodin_sala_auth', 'true');
-                    localStorage.setItem('rodin_user_role', 'professor');
 
                     setTimeout(() => {
                         if (window.FaceSecurity) FaceSecurity.stopCamera(video);
@@ -543,7 +550,6 @@
                     }, 800);
 
                 } else {
-                    // Face não encontrada ou não cadastrada
                     if (box) box.classList.remove('scanning');
                     if (statusEl) {
                         statusEl.style.color = '#EF4444';
@@ -584,10 +590,9 @@
             const errorEl = document.getElementById('sala-login-error');
             
             if ((user.toLowerCase() === 'monitoria' || user.toLowerCase() === 'admin') && (pass === 'Rod!n112358*' || pass === '123456')) {
+                sessionStorage.setItem('rodin_faceid_unlocked', 'true');
                 sessionStorage.setItem('rodin_sala_auth', 'true');
                 sessionStorage.setItem('rodin_user_role', 'monitoria');
-                localStorage.setItem('rodin_sala_auth', 'true');
-                localStorage.setItem('rodin_user_role', 'monitoria');
                 
                 const overlay = document.getElementById('sala-login-overlay');
                 if (overlay) overlay.style.display = 'none';
@@ -606,6 +611,7 @@
 
         window.executarLogoutProfessor = function() {
             if (confirm("Deseja realmente sair da visualização da sala de aula?")) {
+                sessionStorage.removeItem('rodin_faceid_unlocked');
                 sessionStorage.removeItem('rodin_sala_auth');
                 sessionStorage.removeItem('rodin_user_role');
                 localStorage.removeItem('rodin_sala_auth');
@@ -629,10 +635,15 @@
             const db = window.db || {};
             const turmas = db.turmas || [];
             const turmaQuery = obterTurmaAtualURL();
+            const queryNorm = normalizarSlug(turmaQuery);
 
-            let turmaObj = turmas.find(t => t.slug === turmaQuery || t.id === turmaQuery || (t.nome && t.nome.toLowerCase().includes(turmaQuery.toLowerCase())));
+            let turmaObj = turmas.find(t => {
+                const slugNorm = normalizarSlug(t.slug || t.id || t.nome);
+                return slugNorm === queryNorm || t.id === turmaQuery || normalizarSlug(t.nome) === queryNorm;
+            });
+
             if (!turmaObj) {
-                turmaObj = turmas.find(t => t.nome && t.nome.includes('6') && t.nome.includes('A')) || turmas[0] || { id: 't1', nome: '6º Ano A', config_mapa: { linhas: 5, colunas: 5 } };
+                turmaObj = turmas.find(t => normalizarSlug(t.nome).includes(queryNorm)) || turmas.find(t => t.nome && t.nome.includes('6') && t.nome.includes('A')) || turmas[0] || { id: 't1', nome: '6º Ano A', config_mapa: { linhas: 5, colunas: 5 } };
             }
 
             const turmaId = turmaObj.id;
@@ -961,28 +972,24 @@
             fecharModalDetalhesAudio();
         };
 
-        // ============================================================
-        // 5. INICIALIZAÇÃO NO DOMCONTENTLOADED
-        // ============================================================
         document.addEventListener('DOMContentLoaded', () => {
             iniciarRelogioProfessor();
 
-            const hasSalaAuth = sessionStorage.getItem('rodin_sala_auth') === 'true' || localStorage.getItem('rodin_sala_auth') === 'true';
+            const hasFaceAuth = sessionStorage.getItem('rodin_faceid_unlocked') === 'true';
             const modalFacial = document.getElementById('modal-login-facial');
             const overlaySenha = document.getElementById('sala-login-overlay');
             const layout = document.getElementById('app-layout');
             
-            if (hasSalaAuth) {
+            if (hasFaceAuth) {
                 if (modalFacial) modalFacial.style.display = 'none';
                 if (overlaySenha) overlaySenha.style.display = 'none';
                 if (layout) layout.style.display = 'flex';
                 carregarMapaProfessor();
             } else {
-                // Iniciar com Face ID de forma direta e elegante
                 if (layout) layout.style.display = 'none';
                 if (overlaySenha) overlaySenha.style.display = 'none';
                 if (modalFacial) modalFacial.style.display = 'flex';
-                iniciarScanBiometricoFacial();
+                abrirModalScanFacialLogin();
             }
         });
     </script>
