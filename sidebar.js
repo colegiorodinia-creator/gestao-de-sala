@@ -52,8 +52,7 @@ function renderizarSidebarModelo(activePageId) {
         { id: 'analise-geral', url: 'analise-geral.html', icon: 'ph-chart-bar', label: 'Análise Geral' },
         { id: 'raio-x-aluno', url: 'raio-x-aluno.html', icon: 'ph-user-focus', label: 'Raio-X do Aluno' },
         { id: 'setup-turma', url: 'setup-turma.html', icon: 'ph-wrench', label: 'Setup de Turma' },
-        { id: 'cadastros', url: 'cadastros.html', icon: 'ph-user-plus', label: 'Cadastros' },
-        { id: 'visao-professor', url: 'visao-professor.html', icon: 'ph-chalkboard-teacher', label: 'Visão de Sala (Professor)', isSpecial: true }
+        { id: 'cadastros', url: 'cadastros.html', icon: 'ph-user-plus', label: 'Cadastros' }
     ];
 
     const esc = window.escapeHTML || (s => String(s || ''));

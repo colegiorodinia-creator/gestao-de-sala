@@ -60,10 +60,6 @@
                         <i class="ph-bold ph-user-plus"></i>
                         <span class="menu-link-text">Cadastros</span>
                     </a>
-                    <a href="visao-professor.html" class="menu-link btn-prof-sala-link" title="Visão de Sala (Professor)">
-                        <i class="ph-bold ph-chalkboard-teacher"></i>
-                        <span class="menu-link-text">Visão de Sala (Professor)</span>
-                    </a>
                 </div>
             </div>
 
@@ -104,13 +100,16 @@
                                     <p style="font-size:12px; color:var(--rodin-cool-gray); margin:0;">Configure a disposição das carteiras da sala e a grade horária semanal da turma com Arraste e Solte (Drag and Drop).</p>
                                 </div>
                                 
-                                <div style="display:flex; align-items:flex-end; gap:12px;">
+                                <div style="display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap;">
                                     <div class="filter-pill-item" style="margin:0;">
                                         <label style="display:block; font-size:10px; font-weight:800; color:var(--rodin-cool-gray); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.05em;">TURMA EM CONFIGURAÇÃO</label>
                                         <select id="setup-turma-select" onchange="carregarSetupTurma()" style="height:42px; padding:0 14px; border-radius:12px; font-size:13px; font-weight:700; border:1px solid #CBD5E1; background:#FFF; color:var(--rodin-graphite); outline:none; cursor:pointer;"></select>
                                     </div>
                                     <button class="btn-primary-rodin" onclick="salvarSetupTurma()" style="height:42px; padding:0 20px; border-radius:12px; font-size:12px; font-weight:800; display:flex; align-items:center; gap:8px; cursor:pointer;">
                                         <i class="ph-bold ph-floppy-disk"></i> SALVAR CONFIGURAÇÕES
+                                    </button>
+                                    <button type="button" onclick="abrirVisaoProfessorTurmaAtual()" style="height:42px; padding:0 16px; border-radius:12px; font-size:12px; font-weight:800; display:flex; align-items:center; gap:6px; cursor:pointer; background:#FFF7ED; color:var(--rodin-orange); border:1.5px solid var(--rodin-orange);" title="Abrir Visão do Professor desta turma">
+                                        <i class="ph-bold ph-arrow-square-out"></i> ABRIR VISÃO DE SALA
                                     </button>
                                 </div>
                             </div>
@@ -923,6 +922,16 @@
             }
         };
         var salvarSetupTurma = window.salvarSetupTurma;
+
+        window.abrirVisaoProfessorTurmaAtual = function() {
+            const sel = document.getElementById('setup-turma-select');
+            const turmaId = sel ? sel.value : 't1';
+            const turmas = window.db?.turmas || [];
+            const turmaObj = turmas.find(t => t.id === turmaId);
+            const slug = turmaObj?.slug || turmaId;
+            window.open(`visao-professor.html?turma=${encodeURIComponent(slug)}`, '_blank');
+        };
+        var abrirVisaoProfessorTurmaAtual = window.abrirVisaoProfessorTurmaAtual;
 
         document.addEventListener('DOMContentLoaded', async () => {
             if (typeof renderizarSidebarModelo === 'function') renderizarSidebarModelo('setup-turma');
