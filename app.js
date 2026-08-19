@@ -2351,46 +2351,75 @@ async function salvarEdicaoProfessor(e) {
     }
 }
 
+function copiarLinkTurma(slugOuId) {
+    const url = `${window.location.origin}/visao-professor.html?turma=${encodeURIComponent(slugOuId)}`;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+            if (typeof mostrarSnackbar === 'function') mostrarSnackbar(`📋 Link da sala copiado: ${url}`);
+            else alert(`Link copiado: ${url}`);
+        }).catch(() => {
+            prompt("Copie o link abaixo:", url);
+        });
+    } else {
+        prompt("Copie o link da sala:", url);
+    }
+}
+window.copiarLinkTurma = copiarLinkTurma;
+
 function renderizarListaTurmasCadastradas() {
     const lista = document.getElementById('lista-turmas-cadastradas');
     if (!lista) return;
 
-    const turmasOrdenadas = window.ordenarTurmas ? window.ordenarTurmas(db.turmas) : db.turmas;
+    const dbRef = window.db || { turmas: [], alunos: [] };
+    const turmas = dbRef.turmas || [];
+    const turmasOrdenadas = window.ordenarTurmas ? window.ordenarTurmas(turmas) : turmas;
+
+    if (turmasOrdenadas.length === 0) {
+        lista.innerHTML = `<div style="text-align:center; padding:20px; color:var(--rodin-cool-gray); font-size:13px;">Nenhuma turma cadastrada.</div>`;
+        return;
+    }
 
     lista.innerHTML = turmasOrdenadas.map(t => {
-        const totalAlunos = db.alunos.filter(a => a.turma_id === t.id).length;
-
-        let etapaTurma = t.etapa;
-        if (!etapaTurma) {
-            etapaTurma = ['6º Ano', '7º Ano', '8º Ano', '9º Ano'].some(a => t.nome.includes(a)) 
-                ? 'Ensino Fundamental Anos Finais' 
-                : 'Ensino Médio';
-        }
-
-        const slug = t.slug || t.nome.toLowerCase().trim()
-            .replace(/º/g, '')
-            .replace(/\s+/g, '-')
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .replace(/[^a-z0-9\-]/g, '');
-        const linkVisaoProf = `visao-professor-${slug || t.id.replace('turma_', '')}`;
+        const qtdAlunos = (dbRef.alunos || []).filter(a => a.turma_id === t.id).length;
+        const slug = t.slug || (t.nome || '').toLowerCase().trim().replace(/º/g, '').replace(/\s+/g, '-').normalize("NFD").replace(/[\u0300-\u036f]/g, "") || t.id;
+        const urlRelativa = `visao-professor.html?turma=${encodeURIComponent(slug)}`;
+        const urlCompleta = `${window.location.origin}/${urlRelativa}`;
 
         return `
-            <div style="padding:12px 14px; background:#F8FAFC; border:1px solid var(--rodin-line); border-radius:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <div style="width:36px; height:36px; border-radius:10px; background:#0F172A; color:#FFF; display:flex; align-items:center; justify-content:center; font-size:16px;">
-                        <i class="ph-bold ph-chalkboard"></i>
+            <div style="display:flex; flex-direction:column; gap:10px; background:#FFFFFF; padding:16px; border-radius:16px; border:1.5px solid var(--rodin-line); box-shadow:0 2px 8px rgba(15,23,42,0.04); transition:all 0.2s ease;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div style="width:42px; height:42px; border-radius:12px; background:#FFF7ED; color:var(--rodin-orange); display:flex; align-items:center; justify-content:center; font-size:20px; border:1px solid rgba(244,82,6,0.3); flex-shrink:0;">
+                            <i class="ph-bold ph-users-three"></i>
+                        </div>
+                        <div>
+                            <strong style="font-size:15px; font-weight:800; color:var(--rodin-graphite);">${t.nome}</strong>
+                            <div style="font-size:12px; color:var(--rodin-cool-gray); font-weight:600; margin-top:2px;">
+                                ${t.etapa || 'Ensino Fundamental'} • <span style="color:var(--rodin-orange); font-weight:700;">${qtdAlunos} aluno(s)</span>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <strong style="font-size:13px; color:var(--rodin-graphite); display:block;">${t.nome}</strong>
-                        <span style="font-size:11px; color:var(--rodin-cool-gray); font-weight:600;">${totalAlunos} Alunos • ${etapaTurma}</span>
+
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <a href="${urlRelativa}" target="_blank" class="btn-primary-rodin" style="padding:8px 14px; font-size:12px; font-weight:800; border-radius:10px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; background:var(--rodin-orange); color:#FFF; box-shadow:0 4px 12px rgba(244,82,6,0.25);" title="Abrir Visão do Professor do ${t.nome}">
+                            <i class="ph-bold ph-arrow-square-out" style="font-size:15px;"></i> Acessar Sala
+                        </a>
+                        <button type="button" onclick="window.copiarLinkTurma('${slug}')" style="padding:8px 12px; font-size:12px; font-weight:700; border-radius:10px; border:1.5px solid var(--rodin-orange); background:#FFF7ED; color:var(--rodin-orange); cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.2s ease;" title="Copiar link desta sala">
+                            <i class="ph-bold ph-copy" style="font-size:15px;"></i> Copiar Link
+                        </button>
+                        <button class="btn-reset-pink" onclick="window.excluirTurma ? window.excluirTurma('${t.id}') : excluirTurma('${t.id}')" title="Excluir Turma" style="padding:8px 10px; font-size:12px; border-radius:10px; cursor:pointer;">
+                            <i class="ph-bold ph-trash"></i>
+                        </button>
                     </div>
                 </div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <a href="${linkVisaoProf}" class="btn-primary-rodin" style="background:#4338CA; color:#FFF; font-size:11px; padding:6px 12px; border-radius:8px; gap:6px; text-decoration:none; display:inline-flex; align-items:center;" title="Abrir Visão de Sala de Aula desta turma">
-                        <i class="ph-bold ph-chalkboard-teacher" style="font-size:14px;"></i> Visão de Sala
-                    </a>
-                    <button class="btn-reset-pink" onclick="excluirTurma('${t.id}')">Excluir</button>
+
+                <!-- Link Box de Fácil Visualização -->
+                <div style="display:flex; align-items:center; justify-content:space-between; background:#F8FAFC; padding:7px 12px; border-radius:10px; border:1px solid #E2E8F0; gap:8px;">
+                    <div style="display:flex; align-items:center; gap:8px; min-width:0; overflow:hidden;">
+                        <i class="ph-bold ph-link" style="color:var(--rodin-orange); font-size:14px; flex-shrink:0;"></i>
+                        <span style="font-size:11.5px; font-family:monospace; color:#475569; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${urlCompleta}">${urlCompleta}</span>
+                    </div>
+                    <span style="font-size:10px; font-weight:800; color:#059669; background:#ECFDF5; padding:2px 8px; border-radius:6px; border:1px solid #A7F3D0; flex-shrink:0;">Link Exclusivo</span>
                 </div>
             </div>
         `;
@@ -4753,8 +4782,9 @@ function renderizarListaTurmasCadastradas() {
     const container = document.getElementById('lista-turmas-cadastradas');
     if (!container) return;
 
-    if (!db.turmas) db.turmas = [];
-    const turmasOrdenadas = window.ordenarTurmas ? window.ordenarTurmas(db.turmas) : db.turmas;
+    const dbRef = window.db || { turmas: [], alunos: [] };
+    const turmas = dbRef.turmas || [];
+    const turmasOrdenadas = window.ordenarTurmas ? window.ordenarTurmas(turmas) : turmas;
 
     if (turmasOrdenadas.length === 0) {
         container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--rodin-cool-gray); font-size:13px;">Nenhuma turma cadastrada.</div>`;
@@ -4762,21 +4792,47 @@ function renderizarListaTurmasCadastradas() {
     }
 
     container.innerHTML = turmasOrdenadas.map(t => {
-        const qtdAlunos = (db.alunos || []).filter(a => a.turma_id === t.id).length;
+        const qtdAlunos = (dbRef.alunos || []).filter(a => a.turma_id === t.id).length;
+        const slug = t.slug || (t.nome || '').toLowerCase().trim().replace(/º/g, '').replace(/\s+/g, '-').normalize("NFD").replace(/[\u0300-\u036f]/g, "") || t.id;
+        const urlRelativa = `visao-professor.html?turma=${encodeURIComponent(slug)}`;
+        const urlCompleta = `${window.location.origin}/${urlRelativa}`;
+
         return `
-            <div style="display:flex; justify-content:space-between; align-items:center; background:#F8FAFC; padding:12px 16px; border-radius:12px; border:1px solid var(--rodin-line);">
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <div style="width:36px; height:36px; border-radius:10px; background:#FFF7ED; color:var(--rodin-orange); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; border:1px solid var(--rodin-orange);">
-                        <i class="ph-bold ph-users-three"></i>
+            <div style="display:flex; flex-direction:column; gap:10px; background:#FFFFFF; padding:16px; border-radius:16px; border:1.5px solid var(--rodin-line); box-shadow:0 2px 8px rgba(15,23,42,0.04); transition:all 0.2s ease;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div style="width:42px; height:42px; border-radius:12px; background:#FFF7ED; color:var(--rodin-orange); display:flex; align-items:center; justify-content:center; font-size:20px; border:1px solid rgba(244,82,6,0.3); flex-shrink:0;">
+                            <i class="ph-bold ph-users-three"></i>
+                        </div>
+                        <div>
+                            <strong style="font-size:15px; font-weight:800; color:var(--rodin-graphite);">${t.nome}</strong>
+                            <div style="font-size:12px; color:var(--rodin-cool-gray); font-weight:600; margin-top:2px;">
+                                ${t.etapa || 'Ensino Fundamental'} • <span style="color:var(--rodin-orange); font-weight:700;">${qtdAlunos} aluno(s)</span>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <strong style="font-size:14px; color:var(--rodin-graphite);">${t.nome}</strong>
-                        <div style="font-size:11px; color:var(--rodin-cool-gray); font-weight:600;">${t.etapa} • ${qtdAlunos} aluno(s)</div>
+
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <a href="${urlRelativa}" target="_blank" class="btn-primary-rodin" style="padding:8px 14px; font-size:12px; font-weight:800; border-radius:10px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; background:var(--rodin-orange); color:#FFF; box-shadow:0 4px 12px rgba(244,82,6,0.25);" title="Abrir Visão do Professor do ${t.nome}">
+                            <i class="ph-bold ph-arrow-square-out" style="font-size:15px;"></i> Acessar Sala
+                        </a>
+                        <button type="button" onclick="window.copiarLinkTurma('${slug}')" style="padding:8px 12px; font-size:12px; font-weight:700; border-radius:10px; border:1.5px solid var(--rodin-orange); background:#FFF7ED; color:var(--rodin-orange); cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.2s ease;" title="Copiar link desta sala">
+                            <i class="ph-bold ph-copy" style="font-size:15px;"></i> Copiar Link
+                        </button>
+                        <button class="btn-reset-pink" onclick="window.excluirTurma ? window.excluirTurma('${t.id}') : excluirTurma('${t.id}')" title="Excluir Turma" style="padding:8px 10px; font-size:12px; border-radius:10px; cursor:pointer;">
+                            <i class="ph-bold ph-trash"></i>
+                        </button>
                     </div>
                 </div>
-                <button class="btn-reset-pink" onclick="excluirTurma('${t.id}')" title="Excluir Turma" style="padding:6px 12px; font-size:11px;">
-                    <i class="ph-bold ph-trash"></i> Excluir
-                </button>
+
+                <!-- Link Box de Fácil Visualização -->
+                <div style="display:flex; align-items:center; justify-content:space-between; background:#F8FAFC; padding:7px 12px; border-radius:10px; border:1px solid #E2E8F0; gap:8px;">
+                    <div style="display:flex; align-items:center; gap:8px; min-width:0; overflow:hidden;">
+                        <i class="ph-bold ph-link" style="color:var(--rodin-orange); font-size:14px; flex-shrink:0;"></i>
+                        <span style="font-size:11.5px; font-family:monospace; color:#475569; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${urlCompleta}">${urlCompleta}</span>
+                    </div>
+                    <span style="font-size:10px; font-weight:800; color:#059669; background:#ECFDF5; padding:2px 8px; border-radius:6px; border:1px solid #A7F3D0; flex-shrink:0;">Link Exclusivo</span>
+                </div>
             </div>
         `;
     }).join('');
