@@ -1,18 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <script>
-        window.onerror = function(message, source, lineno, colno, error) {
-            const errDiv = document.createElement('div');
-            errDiv.style.cssText = 'position:fixed; top:0; left:0; right:0; background:#EF4444; color:#FFF; padding:20px; z-index:999999; font-family:monospace; font-size:14px; line-height:1.5; border-bottom:4px solid #B91C1C;';
-            errDiv.innerHTML = '<strong>⚠️ JavaScript Error Detected:</strong><br>' + 
-                               'Message: ' + message + '<br>' +
-                               'Source: ' + source + '<br>' +
-                               'Line: ' + lineno + ' | Column: ' + colno;
-            document.documentElement.appendChild(errDiv);
-            return false;
-        };
-    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="icon" type="image/png" href="favicon.png">
@@ -30,39 +18,41 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="global.js"></script>
     <link rel="stylesheet" href="global.css">
-
-    <!-- html2pdf.js (Self-Hosted) -->
-    <script src="/assets/js/html2pdf.bundle.min.js"></script>
-
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="visao-professor.css">
 </head>
-<body style="background:#090D16;">
+<body style="background:#090D16; margin:0; padding:0; overflow-x:hidden; font-family:'Inter', system-ui, -apple-system, sans-serif;">
 
-    <div class="app-layout" id="app-layout">
-        <aside class="sidebar-secondary" id="sidebar-secondary"></aside>
-
-        <main class="main-content">
+    <!-- LAYOUT PRINCIPAL DO MAPA DE SALA (DARK MODE) -->
+    <div class="app-layout" id="app-layout" style="display:none; width:100%; min-height:100vh;">
+        <main class="main-content" style="width:100%; margin-left:0; max-width:100%; padding:0;">
             <div class="view-scroll-container" id="view-scroll-container" style="padding:0;">
                 
-                <!-- NÍVEL 2: PROFESSOR / SALA (DARK MODE COMPLETO) -->
                 <div id="view-professor" class="view-container active">
-                    <div class="view-professor-dark" style="padding:20px;">
+                    <div class="view-professor-dark">
                         
                         <!-- Toolbar Escura do Professor -->
-                        <div class="prof-dark-toolbar" style="margin-bottom:16px;">
+                        <div class="prof-dark-toolbar">
                             <div>
                                 <div class="discipline-tag" id="prof-materia-titulo">Matemática</div>
-                                <div style="font-size:13px; font-weight:700; color:var(--rodin-orange); margin-top:2px;" id="prof-nome-subtexto">Prof. Diego</div>
+                                <div style="font-size:13px; font-weight:700; color:var(--rodin-orange, #F45206); margin-top:3px;" id="prof-nome-subtexto">Prof. Diego</div>
                             </div>
+                            
                             <div class="class-title" id="prof-turma-titulo">6º ANO A</div>
+                            
                             <div style="display:flex; align-items:center; gap:12px;">
-                                <div class="clock-tag"><i class="ph-bold ph-clock"></i> <span id="relogio-prof-dark">08:15</span></div>
+                                <div class="clock-tag">
+                                    <i class="ph-bold ph-clock"></i> 
+                                    <span id="relogio-prof-dark">08:15</span>
+                                </div>
+                                <button type="button" onclick="executarLogoutProfessor()" style="background:#1E293B; color:#94A3B8; border:1px solid #334155; padding:6px 14px; border-radius:999px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s ease;" onmouseover="this.style.background='#EF4444'; this.style.color='#FFF';" onmouseout="this.style.background='#1E293B'; this.style.color='#94A3B8';">
+                                    <i class="ph-bold ph-sign-out"></i> Sair
+                                </button>
                             </div>
                         </div>
 
                         <!-- Banner Lousa / Professor -->
-                        <div style="background:#1E293B; color:#94A3B8; text-align:center; padding:10px; border-radius:12px; font-weight:800; font-size:12px; margin-bottom:16px; border:1px dashed #334155;">
-                            <i class="ph-bold ph-chalkboard-teacher" style="color:var(--rodin-orange); margin-right:6px;"></i> LOUSA / PROFESSOR (FRENTE DA SALA)
+                        <div style="background:#1E293B; color:#94A3B8; text-align:center; padding:12px; border-radius:14px; font-weight:800; font-size:12px; margin-bottom:20px; border:1px dashed #334155; display:flex; align-items:center; justify-content:center; gap:8px;">
+                            <i class="ph-bold ph-chalkboard-teacher" style="color:var(--rodin-orange, #F45206); font-size:18px;"></i> LOUSA / PROFESSOR (FRENTE DA SALA)
                         </div>
 
                         <!-- Grid de Carteiras do Mapa de Sala -->
@@ -75,14 +65,16 @@
     </div>
 
     <!-- MODAL 1: LISTA COMPLETA DE OCORRÊNCIAS DO ALUNO -->
-    <div id="modal-ocorrencia-rodin" class="modal-overlay" style="display:none;">
+    <div id="modal-ocorrencia-rodin" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:10010; align-items:center; justify-content:center; backdrop-filter:blur(6px);">
         <div class="modal-container-rodin" style="position:relative;">
             <button onclick="fecharModalOcorrenciaRodin()" class="btn-close-dark-round" title="Fechar" style="position:absolute; top:20px; right:20px; z-index:10;">&times;</button>
             
             <div class="modal-student-header">
                 <img id="rodin-modal-avatar" src="" alt="Foto Aluno">
-                <h2 id="rodin-modal-nome">Aluno</h2>
-                <span id="rodin-modal-turma" class="student-turma-badge">6º ANO A</span>
+                <div>
+                    <h2 id="rodin-modal-nome">Aluno</h2>
+                    <span id="rodin-modal-turma" class="student-turma-badge">6º ANO A</span>
+                </div>
             </div>
 
             <div id="rodin-options-list" class="rodin-options-list"></div>
@@ -90,61 +82,61 @@
     </div>
 
     <!-- MODAL 3: EXPLICAÇÃO E GUIA DA OCORRÊNCIA (ÍCONE DE INFORMAÇÕES i) -->
-    <div id="modal-info-ocorrencia" class="modal-overlay" style="display:none; z-index: 10010;">
-        <div class="modal-container-popup" style="max-width: 480px; width:92%; background:#0F172A; color:#FFF; border-radius:24px; padding:24px; border:1px solid #334155; position:relative;">
+    <div id="modal-info-ocorrencia" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:10020; align-items:center; justify-content:center; backdrop-filter:blur(6px);">
+        <div style="max-width: 480px; width:92%; background:#0F172A; color:#FFF; border-radius:24px; padding:24px; border:1px solid #334155; position:relative; box-shadow:0 30px 60px rgba(0,0,0,0.8);">
             <button onclick="fecharModalInfoOcorrencia()" class="btn-close-dark-round" title="Fechar" style="position:absolute; top:20px; right:20px; z-index:10;">&times;</button>
             
             <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
-                <div style="width:36px; height:36px; border-radius:10px; background:rgba(255,107,0,0.15); border:1px solid rgba(255,107,0,0.3); display:flex; align-items:center; justify-content:center; color:var(--rodin-orange); font-size:20px;">
+                <div style="width:36px; height:36px; border-radius:10px; background:rgba(244,82,6,0.15); border:1px solid rgba(244,82,6,0.3); display:flex; align-items:center; justify-content:center; color:var(--rodin-orange, #F45206); font-size:20px;">
                     <i class="ph-bold ph-info"></i>
                 </div>
                 <h3 id="info-oc-titulo" style="font-size:16px; font-weight:800; color:#FFF; margin:0;">Informações da Ocorrência</h3>
             </div>
 
             <div style="background:#1E293B; border-radius:14px; padding:14px; border:1px solid #334155; margin-bottom:16px;">
-                <strong style="font-size:11px; text-transform:uppercase; color:var(--rodin-orange); letter-spacing:0.5px; display:block; margin-bottom:6px;">Definição & Orientação Pedagógica:</strong>
+                <strong style="font-size:11px; text-transform:uppercase; color:var(--rodin-orange, #F45206); letter-spacing:0.5px; display:block; margin-bottom:6px;">Definição & Orientação Pedagógica:</strong>
                 <p id="info-oc-definicao" style="font-size:13px; color:#E2E8F0; margin:0 0 10px 0; line-height:1.5;"></p>
-                <div id="info-oc-orientacao" style="font-size:12px; color:#94A3B8; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border-left:3px solid var(--rodin-orange);"></div>
+                <div id="info-oc-orientacao" style="font-size:12px; color:#94A3B8; background:rgba(0,0,0,0.25); padding:10px; border-radius:8px; border-left:3px solid var(--rodin-orange, #F45206);"></div>
             </div>
 
             <div id="info-oc-stats-box" style="margin-bottom:20px;"></div>
 
             <div style="display:flex; gap:12px;">
-                <button type="button" class="btn-primary-rodin" id="btn-info-registrar-agora" onclick="confirmarRegistroViaModalInfo()" style="flex:1; justify-content:center;">
+                <button type="button" class="btn-primary-rodin" id="btn-info-registrar-agora" onclick="confirmarRegistroViaModalInfo()" style="flex:1; justify-content:center; background:var(--rodin-orange, #F45206); color:#FFF; border:none; padding:12px; border-radius:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px;">
                     <i class="ph-bold ph-check-circle" style="font-size:18px;"></i> Registrar Ocorrência
                 </button>
-                <button type="button" class="btn-dark-cancel" onclick="fecharModalInfoOcorrencia()" style="flex:1;">Fechar</button>
+                <button type="button" onclick="fecharModalInfoOcorrencia()" style="flex:1; background:#1E293B; color:#94A3B8; border:1px solid #334155; padding:12px; border-radius:12px; font-weight:700; cursor:pointer;">Fechar</button>
             </div>
         </div>
     </div>
 
     <!-- MODAL 2: POP-UP SECUNDÁRIO DE RELATO E ÁUDIO (OPÇÕES VERMELHAS) -->
-    <div id="modal-detalhes-audio" class="modal-overlay" style="display:none; z-index: 10015;">
-        <div class="modal-container-popup" style="max-width: 500px; width:92%; background:#0F172A; color:#FFF; border-radius:24px; padding:24px; border:1.5px solid var(--rodin-orange); position:relative; box-shadow:0 25px 60px rgba(0,0,0,0.7);">
+    <div id="modal-detalhes-audio" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:10030; align-items:center; justify-content:center; backdrop-filter:blur(6px);">
+        <div style="max-width: 500px; width:92%; background:#0F172A; color:#FFF; border-radius:24px; padding:24px; border:1.5px solid var(--rodin-orange, #F45206); position:relative; box-shadow:0 25px 60px rgba(0,0,0,0.8);">
             <button onclick="fecharModalDetalhesAudio()" class="btn-close-dark-round" title="Fechar" style="position:absolute; top:20px; right:20px; z-index:10;">&times;</button>
             
             <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
                 <div style="width:36px; height:36px; border-radius:10px; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); display:flex; align-items:center; justify-content:center; color:#EF4444; font-size:20px;">
                     <i class="ph-bold ph-warning-octagon"></i>
                 </div>
-                <h3 id="popup-title" style="font-size:17px; font-weight:800; color:#FFF; margin:0;">⚠️ Alteração Comportamental</h3>
+                <h3 id="popup-title" style="font-size:17px; font-weight:800; color:#FFF; margin:0;">⚠️ Relato Detalhado</h3>
             </div>
             
             <p id="popup-description" style="font-size:13px; color:#94A3B8; margin-bottom:16px; line-height:1.4;">
-                Por favor, relate brevemente os detalhes ou sintomas observados.
+                Por favor, relate brevemente os detalhes ou observações pertinentes.
             </p>
 
             <div style="margin-bottom: 16px;">
-                <textarea id="popup-textarea" rows="4" placeholder="Descreva o comportamento observado..." style="width:100%; background:#1E293B; border:1px solid #334155; border-radius:14px; padding:12px; color:#FFF; font-size:13px; font-family:inherit; outline:none; resize:vertical; box-sizing:border-box;"></textarea>
+                <textarea id="popup-textarea" rows="4" placeholder="Descreva a ocorrência observada..." style="width:100%; background:#1E293B; border:1px solid #334155; border-radius:14px; padding:12px; color:#FFF; font-size:13px; font-family:inherit; outline:none; resize:vertical; box-sizing:border-box;"></textarea>
             </div>
 
             <div class="audio-recorder-box" style="background:#1E293B; border:1px solid #334155; border-radius:14px; padding:14px; margin-bottom:20px;">
                 <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#FFF; font-weight:700; margin-bottom:10px;">
-                    <i class="ph-bold ph-microphone" style="color:var(--rodin-orange); font-size:18px;"></i> Gravar Relato em Áudio
+                    <i class="ph-bold ph-microphone" style="color:var(--rodin-orange, #F45206); font-size:18px;"></i> Gravar Relato em Áudio (Opcional)
                 </label>
 
                 <div class="mic-recorder-row" style="display:flex; align-items:center; gap:12px;">
-                    <button type="button" id="btn-mic-record" onclick="alternarGravacaoAudio()" class="btn-mic-pulse" style="width:44px; height:44px; border-radius:50%; background:var(--rodin-orange); border:none; color:#FFF; font-size:20px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s ease; box-shadow:0 4px 12px rgba(255,107,0,0.4);">
+                    <button type="button" id="btn-mic-record" onclick="alternarGravacaoAudio()" style="width:44px; height:44px; border-radius:50%; background:var(--rodin-orange, #F45206); border:none; color:#FFF; font-size:20px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s ease; box-shadow:0 4px 12px rgba(244,82,6,0.4);">
                         <i class="ph-bold ph-microphone"></i>
                     </button>
                     <span id="mic-status-text" style="font-size:12px; color:#94A3B8; font-weight:600;">Clique no microfone para iniciar</span>
@@ -152,112 +144,19 @@
             </div>
 
             <div class="popup-actions" style="display:flex; gap:12px;">
-                <button type="button" class="btn-primary-rodin" onclick="confirmarRegistroDetalhadoAudio()" style="flex:1; justify-content:center;">
+                <button type="button" onclick="confirmarRegistroDetalhadoAudio()" style="flex:1; justify-content:center; background:var(--rodin-orange, #F45206); color:#FFF; border:none; padding:12px; border-radius:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px;">
                     <i class="ph-bold ph-check-circle" style="font-size:18px;"></i> Confirmar Registro
                 </button>
-                <button type="button" class="btn-dark-cancel" onclick="fecharModalDetalhesAudio()" style="flex:1;">Cancelar</button>
+                <button type="button" onclick="fecharModalDetalhesAudio()" style="flex:1; background:#1E293B; color:#94A3B8; border:1px solid #334155; padding:12px; border-radius:12px; font-weight:700; cursor:pointer;">Cancelar</button>
             </div>
-        </div>
-    </div>
-
-    <!-- MODAL 5: DESBLOQUEIO COM ANIMAÇÃO APPLE FACE ID (DURANTE USO DO APP) -->
-    <div id="modal-login-facial" class="modal-overlay" style="display:none; z-index: 10020;">
-        <div class="modal-container-apple-faceid" style="max-width: 360px; width:90%; background:rgba(15, 23, 42, 0.94); color:#FFF; border-radius:32px; padding:32px 24px; border:1px solid rgba(255, 255, 255, 0.12); text-align:center; display:flex; flex-direction:column; align-items:center; position:relative; backdrop-filter:blur(20px); box-shadow:0 30px 70px rgba(0,0,0,0.8); animation: appleModalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
-            <button onclick="fecharModalLoginFacial()" class="btn-close-dark-round" title="Fechar" style="position:absolute; top:18px; right:18px; z-index:10;">&times;</button>
-
-            <!-- Video oculto para streaming de biometria de fundo -->
-            <video id="video-login-facial" autoplay muted playsinline style="display:none;"></video>
-
-            <!-- Scanner Animado Estilo Apple Face ID -->
-            <div class="apple-faceid-scanner-container">
-                <div class="apple-faceid-frame" id="apple-faceid-frame">
-                    <span class="corner top-left"></span>
-                    <span class="corner top-right"></span>
-                    <span class="corner bottom-left"></span>
-                    <span class="corner bottom-right"></span>
-                    
-                    <div class="apple-laser-line" id="apple-laser-line"></div>
-
-                    <!-- Ícone Central Rosto Apple -->
-                    <div class="apple-face-icon" id="apple-face-icon">
-                        <i class="ph-bold ph-smiley-wink" id="apple-icon-symbol"></i>
-                    </div>
-                </div>
-            </div>
-
-            <h3 style="font-size:18px; font-weight:800; color:#FFF; margin-top:20px; margin-bottom:6px; text-align:center; letter-spacing:-0.2px;">Face ID</h3>
-            <p id="face-liveness-status" style="font-size:12.5px; color:#94A3B8; margin:0; text-align:center; line-height:1.4;">
-                Escaneando biometria facial...
-            </p>
-        </div>
-    </div>
-
-
-
-    <!-- MODAL DE TROCA DE AULA (ALERTA PEDAGÓGICO) -->
-    <div id="modal-troca-aula" class="modal-overlay" style="display:none; z-index: 10025;">
-        <div class="modal-container-popup" style="max-width: 480px; width:92%; background:#FFFFFF; border-radius:24px; padding:28px; text-align:center; box-shadow:0 25px 50px -12px rgba(0,0,0,0.4);">
-            <div style="width:64px; height:64px; background:#FFF0E6; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px auto;">
-                <i class="ph-bold ph-arrows-clockwise" style="font-size:32px; color:var(--rodin-orange);"></i>
-            </div>
-            <h3 style="font-size:18px; font-weight:900; color:var(--rodin-graphite); margin-bottom:8px;">⚠️ Troca de Aula Detectada</h3>
-            <p style="font-size:13px; color:var(--rodin-cool-gray); line-height:1.5; margin-bottom:20px;">
-                Uma nova aula foi iniciada. Por favor, <strong>confira o Mapa de Sala</strong> e verifique se os alunos estão ocupando suas carteiras indicadas antes de dar início à aula.
-            </p>
-            <button type="button" class="btn-primary-rodin" onclick="confirmarTrocaAulaMapa()" style="width:100%; justify-content:center; padding:12px; font-size:13px;">
-                <i class="ph-bold ph-check-circle"></i> Conferir Mapa e Iniciar Aula
-            </button>
-        </div>
-    </div>
-    <!-- BLOQUEIO TOTAL DE DISPOSITIVO NO PRIMEIRO ACESSO (PROTEÇÃO CONTRA CURIOSOS) -->
-    <div id="full-screen-device-lock" style="display:none; position:fixed; inset:0; background:#0F172A; z-index:100000; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center; color:#FFF;">
-        <div style="max-width:500px; width:92%; background:#1E293B; border-radius:28px; padding:32px 24px; border:2px solid var(--rodin-orange); box-shadow:0 30px 60px rgba(0,0,0,0.6); display:flex; flex-direction:column; align-items:center;">
-            
-            <div style="width:68px; height:68px; background:rgba(244, 82, 6, 0.15); border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:16px;">
-                <i class="ph-bold ph-shield-check" style="font-size:36px; color:var(--rodin-orange);"></i>
-            </div>
-
-            <h2 style="font-size:22px; font-weight:900; color:#FFF; margin-bottom:8px;">Acesso Restrito ao Tablet de Sala</h2>
-            <p style="font-size:13px; color:#94A3B8; line-height:1.5; margin-bottom:20px;">
-                Este dispositivo exige a <strong>Leitura Facial do Professor</strong> no primeiro acesso para proteger as informações dos alunos.
-            </p>
-
-            <div class="face-camera-wrapper" style="margin:0 auto 16px auto;">
-                <video id="video-device-lock" autoplay muted playsinline></video>
-                <div class="face-oval-guide pulse"></div>
-            </div>
-
-            <div id="device-lock-status-text" class="liveness-status-box" style="width:100%; box-sizing:border-box;">
-                Aproxime seu rosto da câmera para autenticar este dispositivo...
-            </div>
-
-            <button type="button" id="btn-device-lock-scan" class="btn-primary-rodin" onclick="executarScanAutenticacaoDispositivo()" style="width:100%; justify-content:center; margin-top:20px; padding:14px; font-size:14px; gap:8px;">
-                <i class="ph-bold ph-scan" style="font-size:22px;"></i> Autenticar Dispositivo via Leitura Facial
-            </button>
-        </div>
-    </div>
-
-    <!-- MODAL DE ALERTA DE SEGURANÇA (FACIAL FAIL) -->
-    <div id="modal-alerta-seguranca" class="modal-overlay" style="display:none; z-index: 200010;">
-        <div class="modal-container-popup" style="max-width: 440px; width:92%; background:#131C2E; border-radius:24px; padding:32px 28px; text-align:center; box-shadow:0 25px 50px -12px rgba(0,0,0,0.6); border: 2px solid #EF4444; color: #FFF; font-family:'Outfit', sans-serif;">
-            <div style="width:64px; height:64px; background:rgba(239, 68, 68, 0.15); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 20px auto; border: 1px solid rgba(239, 68, 68, 0.3);">
-                <i class="ph-bold ph-shield-warning" style="font-size:32px; color:#EF4444;"></i>
-            </div>
-            <h3 style="font-size:20px; font-weight:800; color:#FFF; margin:0 0 10px 0;">Segurança Ativada</h3>
-            <p style="font-size:13px; color:#94A3B8; line-height:1.5; margin:0 0 24px 0;">
-                Foram detectadas <strong>3 tentativas consecutivas incorretas</strong> no Face ID.<br>Por segurança, o painel foi bloqueado e requer reautenticação da monitoria.
-            </p>
-            <button type="button" class="btn-primary-rodin" onclick="fecharAlertaSeguranca()" style="width:100%; justify-content:center; padding:12px; font-size:13px; background:#EF4444; border-color:#EF4444; color:#FFF; border-radius:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px;">
-                <i class="ph-bold ph-key"></i> Autenticar Monitoria
-            </button>
         </div>
     </div>
 
     <!-- OVERLAY DE LOGIN SEGURO PARA A MONITORIA / SALA DE AULA -->
-    <div id="sala-login-overlay" style="position:fixed; inset:0; background:#0B0F19; z-index:200000; display:flex; align-items:center; justify-content:center; padding:20px; font-family:'Outfit', sans-serif;">
+    <div id="sala-login-overlay" style="position:fixed; inset:0; background:#0B0F19; z-index:200000; display:flex; align-items:center; justify-content:center; padding:20px;">
         <div style="background:#131C2E; max-width:400px; width:100%; padding:36px 28px; border-radius:24px; border:1px solid #1E293B; text-align:center; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
-            <div style="width:56px; height:56px; background:rgba(255,107,0,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px auto; border:1px solid rgba(255,107,0,0.2);">
-                <i class="ph-bold ph-shield-check" style="font-size:28px; color:var(--rodin-orange);"></i>
+            <div style="width:56px; height:56px; background:rgba(244,82,6,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px auto; border:1px solid rgba(244,82,6,0.2);">
+                <i class="ph-bold ph-shield-check" style="font-size:28px; color:var(--rodin-orange, #F45206);"></i>
             </div>
             <h2 style="font-size:20px; font-weight:800; color:#FFFFFF; margin:0 0 6px 0;">Acesso à Sala de Aula</h2>
             <p style="font-size:12.5px; color:#94A3B8; margin:0 0 24px 0; line-height:1.5;">Este dispositivo está restrito. Insira as credenciais autorizadas para visualizar o mapa de sala.</p>
@@ -274,7 +173,7 @@
                 <div id="sala-login-error" style="color:#EF4444; font-size:11.5px; font-weight:600; text-align:center; display:none; margin-top:2px;">
                     ⚠️ Usuário ou senha incorretos!
                 </div>
-                <button type="submit" style="width:100%; justify-content:center; padding:12px; font-size:13px; margin-top:6px; background:var(--rodin-orange); color:#FFF; border:none; border-radius:12px; cursor:pointer; font-weight:700; display:flex; align-items:center; gap:8px;">
+                <button type="submit" style="width:100%; justify-content:center; padding:12px; font-size:13px; margin-top:6px; background:var(--rodin-orange, #F45206); color:#FFF; border:none; border-radius:12px; cursor:pointer; font-weight:700; display:flex; align-items:center; gap:8px;">
                     <i class="ph-bold ph-sign-in" style="font-size:18px;"></i> Desbloquear Sala
                 </button>
             </form>
@@ -282,40 +181,536 @@
     </div>
 
     <!-- SCRIPTS -->
-    <script src="global.js"></script>
-    <script src="sidebar.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.js" crossorigin="anonymous"></script>
-    <script src="face_security.js"></script>
-    <script src="app.js"></script>
     <script>
-        function aplicarRestricoesMonitoria() {
-            // Ocultar barra lateral incondicionalmente para o perfil de sala
-            const sidebar = document.getElementById('sidebar-secondary');
-            if (sidebar) {
-                sidebar.style.setProperty('display', 'none', 'important');
+        // ============================================================
+        // 1. GERENCIAMENTO DE ESTADO E INICIALIZAÇÃO
+        // ============================================================
+        window.estadoApp = window.estadoApp || {
+            alunoSelecionadoModal: null,
+            motivoSelecionadoModal: null
+        };
+
+        const LISTA_OCORRENCIAS_PADRAO = [
+            { tipo: "FOI AO BANHEIRO/BEBEDOURO", categoria: "green", icon: "ph-drop" },
+            { tipo: "SONOLENTO", categoria: "green", icon: "ph-moon" },
+            { tipo: "FAZENDO TAREFA DE OUTRA MATÉRIA", categoria: "green", icon: "ph-notebook" },
+            { tipo: "EXCESSO DE CONVERSA", categoria: "yellow", icon: "ph-chats-circle" },
+            { tipo: "SAIU DO MAPA PARA CONVERSAR", categoria: "yellow", icon: "ph-footprints" },
+            { tipo: "EXCESSO DE BRINCADEIRAS", categoria: "yellow", icon: "ph-confetti" },
+            { tipo: "LINGUAJAR INADEQUADO", categoria: "yellow", icon: "ph-speaker-slash" },
+            { tipo: "USO CELULAR", categoria: "yellow", icon: "ph-device-mobile" },
+            { tipo: "TEMPO EXCESSIVO NO BANHEIRO/BEBEDOURO", categoria: "yellow", icon: "ph-timer" },
+            { tipo: "DORMINDO", categoria: "red", icon: "ph-bed" },
+            { tipo: "DESRESPEITOSO COM COLEGAS", categoria: "red", icon: "ph-user-minus" },
+            { tipo: "DESRESPEITOSO COM PROFESSOR", categoria: "red", icon: "ph-warning-octagon" },
+            { tipo: "BRINCADEIRAS PERIGOSAS", categoria: "red", icon: "ph-fire" },
+            { tipo: "ALUNO CONVIDADO A SE RETIRAR DA SALA DE AULA", categoria: "red", icon: "ph-door-open" },
+            { tipo: "ALTERAÇÃO COMPORTAMENTAL", categoria: "red", icon: "ph-heartbreak" }
+        ];
+
+        const GUIA_OCORRENCIAS = {
+            "FOI AO BANHEIRO/BEBEDOURO": {
+                definicao: "Registro de saída momentânea da sala de aula autorizada pelo professor para uso do sanitário ou bebedouro.",
+                orientacao: "Útil para monitoramento preventivo de frequência e cálculo de tempo fora da sala de aula."
+            },
+            "SONOLENTO": {
+                definicao: "Aluno apresenta sinais claros de sonolência, fadiga, dispersão severa ou dificuldade de manter os olhos abertos.",
+                orientacao: "Auxilia a equipe pedagógica a identificar distúrbios de sono, rotina doméstica ou cansaço acumulado."
+            },
+            "DORMINDO": {
+                definicao: "Aluno adormeceu sobre a carteira durante a explicação ou realização de atividades.",
+                orientacao: "Requer intervenção cuidadosa do professor e notificação para acompanhamento do acolhimento."
+            },
+            "EXCESSO DE CONVERSA": {
+                definicao: "Diálogos paralelos constantes que perturbam a explicação do professor e a atenção dos demais alunos.",
+                orientacao: "Registrar preferencialmente após orientações ou advertências verbais prévias em sala."
+            },
+            "SAIU DO MAPA PARA CONVERSAR": {
+                definicao: "Aluno levantou-se da sua carteira designada no mapa de sala para conversar com colegas em outros pontos da sala.",
+                orientacao: "Dado crucial para a análise de Inteligência Artificial sobre a eficácia da posição das carteiras."
+            },
+            "EXCESSO DE BRINCADEIRAS": {
+                definicao: "Atividades lúdicas inadequadas ao momento de aula, gerando distração coletiva e quebra de foco.",
+                orientacao: "Registrar quando a brincadeira persistir mesmo após aviso verbal."
+            },
+            "DESRESPEITOSO COM COLEGAS": {
+                definicao: "Uso de apelidos pejorativos, zombarias, atitudes de exclusão, ofensas verbais ou empurrões com outros estudantes.",
+                orientacao: "Notificação de alta prioridade para mediação do setor de Acolhimento e Orientação Educacional."
+            },
+            "DESRESPEITOSO COM PROFESSOR": {
+                definicao: "Respostas rudes, desafiadoras, ironias, desobediência direta ou postura agressiva direcionada ao docente.",
+                orientacao: "Registro imediato para acompanhamento direto pela Coordenação Pedagógica."
+            },
+            "FAZENDO TAREFA DE OUTRA MATÉRIA": {
+                definicao: "Aluno realizando trabalhos, tarefas de casa ou estudando para outras disciplinas durante o tempo desta aula.",
+                orientacao: "Permite orientar o estudante sobre gestão de tempo, prioridades e foco nas aulas vigentes."
+            },
+            "LINGUAJAR INADEQUADO": {
+                definicao: "Uso de palavrões, termos chulos, linguagem obscena ou ofensiva dentro do ambiente escolar.",
+                orientacao: "Registro para reforço de regras de convivência, respeito e civilidade."
+            },
+            "USO CELULAR": {
+                definicao: "Manuseio ou utilização de dispositivos eletrônicos pessoais (celular, jogos, fones) sem autorização pedagógica.",
+                orientacao: "Em conformidade com o regulamento escolar de uso de tecnologia do Colégio Rodin."
+            },
+            "BRINCADEIRAS PERIGOSAS": {
+                definicao: "Ações de risco físico, como arremessar objetos, empurrar cadeiras, correr entre carteiras ou simular lutas.",
+                orientacao: "Alerta de segurança imediato."
+            },
+            "TEMPO EXCESSIVO NO BANHEIRO/BEBEDOURO": {
+                definicao: "Permanência prolongada fora da sala (superior a 10 minutos) após autorização para ir ao banheiro/bebedouro.",
+                orientacao: "Crucial para identificar esquiva de aulas ou agrupamento no corredor."
+            },
+            "ALUNO CONVIDADO A SE RETIRAR DA SALA DE AULA": {
+                definicao: "Ocorrência grave onde o estudante precisou ser encaminhado à Orientação Educacional devido ao comprometimento da aula.",
+                orientacao: "Exige relato detalhado por escrito ou áudio do professor."
+            },
+            "ALTERAÇÃO COMPORTAMENTAL": {
+                definicao: "Mudança brusca de humor ou comportamento (choro copioso, crise de ansiedade, isolamento atípico, apatia extrema).",
+                orientacao: "Notificação urgente para a equipe de Psicologia/Acolhimento da escola."
             }
-            
-            // Forçar a tela principal a ocupar 100% de largura
-            const mainContent = document.querySelector('.main-content');
-            if (mainContent) {
-                mainContent.style.marginLeft = '0';
-                mainContent.style.width = '100%';
-                mainContent.style.maxWidth = '100%';
-            }
-            
-            const viewScroll = document.getElementById('view-scroll-container');
-            if (viewScroll) {
-                viewScroll.style.padding = '0';
-            }
+        };
+
+        function formatarNomeResumidoAluno(nome) {
+            if (!nome) return "Aluno";
+            const partes = nome.trim().split(/\s+/);
+            if (partes.length === 1) return partes[0];
+            return `${partes[0]} ${partes[partes.length - 1]}`;
         }
 
-        function validarLoginMonitoria(event) {
+        function iniciarRelogioProfessor() {
+            const relogioEl = document.getElementById('relogio-prof-dark');
+            const atualizar = () => {
+                const agora = new Date();
+                const hh = String(agora.getHours()).padStart(2, '0');
+                const mm = String(agora.getMinutes()).padStart(2, '0');
+                if (relogioEl) relogioEl.innerText = `${hh}:${mm}`;
+            };
+            atualizar();
+            setInterval(atualizar, 1000);
+        }
+
+        function obterTurmaAtualURL() {
+            const params = new URLSearchParams(window.location.search);
+            const turmaQuery = params.get('turma');
+            if (turmaQuery) return turmaQuery;
+
+            const path = window.location.pathname;
+            const match = path.match(/visao-professor-([a-zA-Z0-9-]+)/);
+            if (match && match[1]) return match[1];
+
+            return '6-ano-a';
+        }
+
+        function obterAulaAtualDaGrade(turmaId) {
+            const agora = new Date();
+            const diaSemana = agora.getDay();
+            let diaX = (diaSemana >= 1 && diaSemana <= 5) ? diaSemana - 1 : 0;
+
+            const horas = agora.getHours();
+            const mins = agora.getMinutes();
+            const tempoAtual = horas * 60 + mins;
+
+            let slotY = 0;
+            if (tempoAtual < 8 * 60 + 5) slotY = 0;
+            else if (tempoAtual < 8 * 60 + 55) slotY = 1;
+            else if (tempoAtual < 9 * 60 + 45) slotY = 2;
+            else if (tempoAtual < 10 * 60 + 55) slotY = 3;
+            else if (tempoAtual < 11 * 60 + 45) slotY = 4;
+            else slotY = 5;
+
+            const gradeSlots = window.db?.grade_slots || [];
+            const slot = gradeSlots.find(s => (s.turma_id === turmaId || s.turma_id === 't1') && s.posicao_x === diaX && s.posicao_y === slotY);
+
+            if (slot) {
+                const disc = (window.db?.disciplinas || []).find(d => d.id === slot.disciplina_id);
+                const prof = (window.db?.professores || []).find(p => p.id === slot.professor_id);
+                return {
+                    disciplina: disc ? disc.nome : 'Matemática',
+                    professor: prof ? prof.nome : 'Diego'
+                };
+            }
+
+            return {
+                disciplina: 'Matemática',
+                professor: 'Diego'
+            };
+        }
+
+        function renderBadgesPhotocard(alunoId, ocs24h) {
+            const contagem = (ocs24h || []).filter(o => o.aluno_id === alunoId).length;
+            if (contagem === 0) return '';
+            return `<span class="oc-badge-counter"><i class="ph-bold ph-warning-circle"></i> ${contagem} ${contagem === 1 ? 'ocorrência' : 'ocorrências'}</span>`;
+        }
+
+        // ============================================================
+        // 2. CARREGAMENTO PRINCIPAL DO MAPA DO PROFESSOR
+        // ============================================================
+        window.carregarMapaProfessor = async function() {
+            if (window.carregarBancoDeDadosLocal) {
+                window.carregarBancoDeDadosLocal();
+            }
+
+            const db = window.db || {};
+            const turmas = db.turmas || [];
+            const turmaQuery = obterTurmaAtualURL();
+
+            let turmaObj = turmas.find(t => t.slug === turmaQuery || t.id === turmaQuery || (t.nome && t.nome.toLowerCase().includes(turmaQuery.toLowerCase())));
+            if (!turmaObj) {
+                turmaObj = turmas.find(t => t.nome && t.nome.includes('6') && t.nome.includes('A')) || turmas[0] || { id: 't1', nome: '6º Ano A', config_mapa: { linhas: 5, colunas: 5 } };
+            }
+
+            const turmaId = turmaObj.id;
+
+            const titleEl = document.getElementById('prof-turma-titulo');
+            if (titleEl) titleEl.innerText = (turmaObj.nome || '6º ANO A').toUpperCase();
+
+            const aulaInfo = obterAulaAtualDaGrade(turmaId);
+            const materiaEl = document.getElementById('prof-materia-titulo');
+            const profEl = document.getElementById('prof-nome-subtexto');
+
+            if (materiaEl) materiaEl.innerText = aulaInfo.disciplina;
+            if (profEl) {
+                profEl.innerText = aulaInfo.professor ? `Prof. ${aulaInfo.professor}` : '';
+                profEl.style.display = 'block';
+            }
+
+            const agora = new Date();
+            const janela24h = 24 * 60 * 60 * 1000;
+            const ocs24h = (db.ocorrencias || []).filter(o => {
+                const dt = new Date(o.created_at || o.data || o.data_ocorrencia);
+                const diff = agora - dt;
+                return !isNaN(dt.getTime()) && diff >= 0 && diff <= janela24h;
+            });
+
+            const grid = document.getElementById('prof-photocards-grid');
+            if (!grid) return;
+
+            const cfg = turmaObj.config_mapa || { linhas: 5, colunas: 5 };
+            const rows = cfg.linhas || 5;
+            const cols = cfg.colunas || 5;
+
+            grid.style.display = 'grid';
+            grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+            grid.style.gap = '16px';
+
+            const mapaSlots = (db.mapa_slots || []).filter(s => s.turma_id === turmaId);
+            const alunos = (db.alunos || []).filter(a => a.turma_id === turmaId);
+
+            let html = '';
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const slot = mapaSlots.find(s => s.posicao_x === c && s.posicao_y === r);
+                    const aluno = slot ? (alunos.find(a => a.id === slot.aluno_id) || (db.alunos || []).find(a => a.id === slot.aluno_id)) : null;
+
+                    if (aluno) {
+                        const temCondicao = aluno.condicao && !['NENHUMA', 'REGULAR', 'NENHUM', 'SEM CONDIÇÃO'].includes(aluno.condicao.toUpperCase().trim());
+                        const condHtml = temCondicao ? `<span class="condition-pill">${aluno.condicao.toUpperCase()}</span>` : '';
+                        const nomeResumido = formatarNomeResumidoAluno(aluno.nome);
+                        const fotoSrc = aluno.avatar || aluno.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(aluno.nome)}&background=F45206&color=fff`;
+
+                        html += `
+                            <div class="student-photocard" onclick="abrirModalOcorrenciaRodin('${aluno.id}')" title="Clique para registrar ocorrência para ${aluno.nome}">
+                                <img src="${fotoSrc}" alt="${aluno.nome}" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(aluno.nome)}&background=F45206&color=fff'">
+                                <div class="photocard-gradient-overlay">
+                                    <div class="student-name-text">${nomeResumido}</div>
+                                    ${condHtml}
+                                    ${renderBadgesPhotocard(aluno.id, ocs24h)}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        html += `
+                            <div class="empty-desk-card">
+                                <i class="ph-bold ph-student" style="font-size:28px; margin-bottom:6px; opacity:0.4;"></i>
+                                <span style="font-size:11px; font-weight:700;">Carteira Vazia</span>
+                            </div>
+                        `;
+                    }
+                }
+            }
+
+            grid.innerHTML = html;
+
+            if (window.sb && !window._profMapSupabaseFetched) {
+                window._profMapSupabaseFetched = true;
+                if (window.sincronizarBancoComSupabase) {
+                    window.sincronizarBancoComSupabase().then(() => {
+                        window.carregarMapaProfessor();
+                    }).catch(()=>{});
+                }
+            }
+        };
+
+        // ============================================================
+        // 3. MODAIS DE OCORRÊNCIA E POPUP DE ÁUDIO
+        // ============================================================
+        window.abrirModalOcorrenciaRodin = function(alunoId) {
+            const db = window.db || {};
+            const aluno = (db.alunos || []).find(a => a.id === alunoId);
+            if (!aluno) return;
+
+            window.estadoApp.alunoSelecionadoModal = aluno;
+
+            const avatarEl = document.getElementById('rodin-modal-avatar');
+            const nomeEl = document.getElementById('rodin-modal-nome');
+            const turmaEl = document.getElementById('rodin-modal-turma');
+
+            if (avatarEl) avatarEl.src = aluno.avatar || aluno.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(aluno.nome)}&background=F45206&color=fff`;
+            if (nomeEl) nomeEl.innerText = aluno.nome;
+            if (turmaEl) {
+                const turmaObj = (db.turmas || []).find(t => t.id === aluno.turma_id);
+                turmaEl.innerText = (turmaObj ? turmaObj.nome : '6º ANO A').toUpperCase();
+            }
+
+            const optionsList = document.getElementById('rodin-options-list');
+            if (optionsList) {
+                optionsList.innerHTML = LISTA_OCORRENCIAS_PADRAO.map(opt => {
+                    const isRed = opt.categoria === 'red';
+                    const clickAction = isRed ? `abrirModalDetalhesAudio('${opt.tipo}')` : `registrarOcorrenciaRodin('${opt.tipo}')`;
+
+                    return `
+                        <div class="rodin-option-row ${opt.categoria}" onclick="${clickAction}">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <i class="ph-bold ${opt.icon}" style="font-size:18px; color:${opt.categoria === 'green' ? '#10B981' : opt.categoria === 'yellow' ? '#F59E0B' : '#EF4444'};"></i>
+                                <span style="font-size:13px; font-weight:700; color:#FFF;">${opt.tipo}</span>
+                            </div>
+                            <button type="button" class="btn-info-icon" onclick="abrirInfoOcorrencia(event, '${opt.tipo}')" title="Ver orientações pedagógicas">
+                                <i class="ph-bold ph-info"></i>
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            const modal = document.getElementById('modal-ocorrencia-rodin');
+            if (modal) modal.style.display = 'flex';
+        };
+
+        window.fecharModalOcorrenciaRodin = function() {
+            const modal = document.getElementById('modal-ocorrencia-rodin');
+            if (modal) modal.style.display = 'none';
+        };
+
+        window.registrarOcorrenciaRodin = async function(motivo, extraData = {}) {
+            const aluno = window.estadoApp.alunoSelecionadoModal;
+            if (!aluno) return;
+
+            const materiaEl = document.getElementById('prof-materia-titulo');
+            const profEl = document.getElementById('prof-nome-subtexto');
+
+            const novaOc = {
+                id: 'oc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                aluno_id: aluno.id,
+                turma_id: aluno.turma_id,
+                tipo: motivo,
+                descricao: extraData.descricao || '',
+                audio_url: extraData.audio_url || null,
+                professor_nome: (profEl ? profEl.innerText.replace('Prof. ', '') : 'Diego') || 'Diego',
+                disciplina_nome: materiaEl ? materiaEl.innerText : 'Matemática',
+                created_at: new Date().toISOString()
+            };
+
+            window.db = window.db || {};
+            window.db.ocorrencias = window.db.ocorrencias || [];
+            window.db.ocorrencias.push(novaOc);
+
+            try {
+                window.safeSetLocalStorage('rodin_ocorrencias', window.db.ocorrencias);
+            } catch(e){}
+
+            if (window.sb && typeof window.sb.from === 'function') {
+                window.sb.from('ocorrencias_alunos').insert([{
+                    id: novaOc.id,
+                    aluno_id: novaOc.aluno_id,
+                    turma_id: novaOc.turma_id,
+                    tipo: novaOc.tipo,
+                    descricao: novaOc.descricao,
+                    audio_url: novaOc.audio_url,
+                    professor_nome: novaOc.professor_nome,
+                    created_at: novaOc.created_at
+                }]).catch(()=>{});
+            }
+
+            fecharModalOcorrenciaRodin();
+            carregarMapaProfessor();
+            mostrarSnackbar(`Ocorrência '${motivo}' registrada com sucesso!`);
+        };
+
+        let motivoInfoAtual = null;
+
+        window.abrirInfoOcorrencia = function(event, motivo) {
+            if (event) event.stopPropagation();
+
+            motivoInfoAtual = motivo;
+            const info = GUIA_OCORRENCIAS[motivo] || {
+                definicao: `Definição pedagógica da ocorrência '${motivo}'.`,
+                orientacao: "Utilize para acompanhamento comportamental do aluno."
+            };
+
+            const aluno = window.estadoApp.alunoSelecionadoModal;
+            const tituloEl = document.getElementById('info-oc-titulo');
+            const defEl = document.getElementById('info-oc-definicao');
+            const orientEl = document.getElementById('info-oc-orientacao');
+            const statsEl = document.getElementById('info-oc-stats-box');
+
+            if (tituloEl) tituloEl.innerText = motivo;
+            if (defEl) defEl.innerText = info.definicao;
+            if (orientEl) orientEl.innerText = info.orientacao;
+
+            if (statsEl && aluno) {
+                const db = window.db || {};
+                const ocs = (db.ocorrencias || []).filter(o => o.aluno_id === aluno.id && (o.tipo || '').toUpperCase() === motivo.toUpperCase());
+                const agora = new Date();
+                const hojeCount = ocs.filter(o => new Date(o.created_at || o.data).toDateString() === agora.toDateString()).length;
+                const d7Count = ocs.filter(o => (agora - new Date(o.created_at || o.data)) <= 7 * 24 * 60 * 60 * 1000).length;
+                const totalCount = ocs.length;
+
+                statsEl.innerHTML = `
+                    <div style="background:#1E293B; border-radius:14px; padding:12px; border:1px solid #334155;">
+                        <span style="font-size:11px; font-weight:800; color:#94A3B8; text-transform:uppercase;">Histórico de <strong>${aluno.nome}</strong> nesta ocorrência:</span>
+                        <div style="display:flex; gap:12px; margin-top:8px;">
+                            <div style="flex:1; background:#0F172A; padding:8px; border-radius:10px; text-align:center;">
+                                <span style="font-size:10px; color:#94A3B8; display:block;">Hoje</span>
+                                <strong style="font-size:16px; color:var(--rodin-orange, #F45206);">${hojeCount}</strong>
+                            </div>
+                            <div style="flex:1; background:#0F172A; padding:8px; border-radius:10px; text-align:center;">
+                                <span style="font-size:10px; color:#94A3B8; display:block;">Últimos 7 dias</span>
+                                <strong style="font-size:16px; color:#FFF;">${d7Count}</strong>
+                            </div>
+                            <div style="flex:1; background:#0F172A; padding:8px; border-radius:10px; text-align:center;">
+                                <span style="font-size:10px; color:#94A3B8; display:block;">Total</span>
+                                <strong style="font-size:16px; color:#FFF;">${totalCount}</strong>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const modal = document.getElementById('modal-info-ocorrencia');
+            if (modal) modal.style.display = 'flex';
+        };
+
+        window.fecharModalInfoOcorrencia = function() {
+            const modal = document.getElementById('modal-info-ocorrencia');
+            if (modal) modal.style.display = 'none';
+        };
+
+        window.confirmarRegistroViaModalInfo = function() {
+            if (!motivoInfoAtual) return;
+            const isRed = LISTA_OCORRENCIAS_PADRAO.find(o => o.tipo === motivoInfoAtual)?.categoria === 'red';
+            fecharModalInfoOcorrencia();
+            if (isRed) {
+                abrirModalDetalhesAudio(motivoInfoAtual);
+            } else {
+                registrarOcorrenciaRodin(motivoInfoAtual);
+            }
+        };
+
+        let gravacaoAudioAtiva = false;
+        let audioRecorder = null;
+        let audioChunks = [];
+        let audioGravadoBlob = null;
+
+        window.abrirModalDetalhesAudio = function(motivo) {
+            window.estadoApp.motivoSelecionadoModal = motivo;
+            
+            const titleEl = document.getElementById('popup-title');
+            const descEl = document.getElementById('popup-description');
+            const textEl = document.getElementById('popup-textarea');
+            const micText = document.getElementById('mic-status-text');
+
+            if (titleEl) titleEl.innerText = `⚠️ ${motivo}`;
+            if (descEl) descEl.innerText = `Por favor, descreva ou grave os detalhes observados sobre '${motivo}'.`;
+            if (textEl) textEl.value = '';
+            if (micText) micText.innerText = 'Clique no microfone para iniciar a gravação';
+
+            gravacaoAudioAtiva = false;
+            audioGravadoBlob = null;
+
+            const modal = document.getElementById('modal-detalhes-audio');
+            if (modal) modal.style.display = 'flex';
+        };
+
+        window.fecharModalDetalhesAudio = function() {
+            if (gravacaoAudioAtiva && audioRecorder) {
+                try { audioRecorder.stop(); } catch(e){}
+            }
+            gravacaoAudioAtiva = false;
+            const modal = document.getElementById('modal-detalhes-audio');
+            if (modal) modal.style.display = 'none';
+        };
+
+        window.alternarGravacaoAudio = async function() {
+            const btn = document.getElementById('btn-mic-record');
+            const statusText = document.getElementById('mic-status-text');
+
+            if (!gravacaoAudioAtiva) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    audioChunks = [];
+                    audioRecorder = new MediaRecorder(stream);
+                    audioRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+                    audioRecorder.onstop = () => {
+                        audioGravadoBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        if (statusText) statusText.innerText = '✅ Áudio gravado com sucesso!';
+                    };
+                    audioRecorder.start();
+                    gravacaoAudioAtiva = true;
+                    if (btn) btn.style.background = '#EF4444';
+                    if (statusText) statusText.innerText = '🔴 Gravando relato... Clique para parar';
+                } catch (err) {
+                    if (statusText) statusText.innerText = '⚠️ Microfone não disponível. Utilize o campo de texto.';
+                }
+            } else {
+                if (audioRecorder) audioRecorder.stop();
+                gravacaoAudioAtiva = false;
+                if (btn) btn.style.background = 'var(--rodin-orange, #F45206)';
+            }
+        };
+
+        window.confirmarRegistroDetalhadoAudio = function() {
+            const motivo = window.estadoApp.motivoSelecionadoModal;
+            const texto = document.getElementById('popup-textarea')?.value.trim() || '';
+
+            if (gravacaoAudioAtiva && audioRecorder) {
+                try { audioRecorder.stop(); } catch(e){}
+            }
+
+            registrarOcorrenciaRodin(motivo, {
+                descricao: texto,
+                audio_url: audioGravadoBlob ? 'audio_gravado_local' : null
+            });
+
+            fecharModalDetalhesAudio();
+        };
+
+        // ============================================================
+        // 4. AUTENTICAÇÃO E LOGOUT DA SALA DE AULA (SEM AUTO-LOCK)
+        // ============================================================
+        window.executarLogoutProfessor = function() {
+            if (confirm("Deseja realmente sair da visualização da sala de aula?")) {
+                sessionStorage.removeItem('rodin_sala_auth');
+                sessionStorage.removeItem('rodin_user_role');
+                localStorage.removeItem('rodin_sala_auth');
+                localStorage.removeItem('rodin_user_role');
+                
+                const overlay = document.getElementById('sala-login-overlay');
+                if (overlay) overlay.style.display = 'flex';
+                
+                const layout = document.getElementById('app-layout');
+                if (layout) layout.style.setProperty('display', 'none', 'important');
+            }
+        };
+
+        window.validarLoginMonitoria = function(event) {
             event.preventDefault();
             const user = (document.getElementById('sala-login-user').value || '').trim();
             const pass = (document.getElementById('sala-login-pass').value || '');
             const errorEl = document.getElementById('sala-login-error');
             
-            if (user === 'monitoria' && pass === 'Rod!n112358*') {
+            if (user.toLowerCase() === 'monitoria' && pass === 'Rod!n112358*') {
                 sessionStorage.setItem('rodin_sala_auth', 'true');
                 sessionStorage.setItem('rodin_user_role', 'monitoria');
                 localStorage.setItem('rodin_sala_auth', 'true');
@@ -327,7 +722,6 @@
                 const layout = document.getElementById('app-layout');
                 if (layout) layout.style.display = 'flex';
                 
-                aplicarRestricoesMonitoria();
                 carregarMapaProfessor();
             } else {
                 if (errorEl) {
@@ -335,18 +729,21 @@
                     setTimeout(() => { errorEl.style.display = 'none'; }, 3000);
                 }
             }
-        }
+        };
 
+        // ============================================================
+        // 5. INICIALIZAÇÃO NO DOMCONTENTLOADED
+        // ============================================================
         document.addEventListener('DOMContentLoaded', () => {
+            iniciarRelogioProfessor();
+
             const hasSalaAuth = sessionStorage.getItem('rodin_sala_auth') === 'true' || localStorage.getItem('rodin_sala_auth') === 'true';
-            
             const overlay = document.getElementById('sala-login-overlay');
             const layout = document.getElementById('app-layout');
             
             if (hasSalaAuth) {
                 if (overlay) overlay.style.setProperty('display', 'none', 'important');
                 if (layout) layout.style.display = 'flex';
-                aplicarRestricoesMonitoria();
                 carregarMapaProfessor();
             } else {
                 if (overlay) overlay.style.display = 'flex';
