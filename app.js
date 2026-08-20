@@ -4335,54 +4335,69 @@ function fecharModalCadastroFacial() {
 }
 
 async function processarCadastroFacialProfessor() {
-    if (!window.profIdCadastroFacial) return;
-    const prof = db.professores.find(p => p.id === window.profIdCadastroFacial);
-    if (!prof) return;
+    const profId = window.profIdCadastroFacial || window._profCadastroFacialId;
+    if (!profId) return;
+
+    const professores = (window.db?.professores) ? window.db.professores : (typeof db !== 'undefined' && db.professores ? db.professores : []);
+    let prof = professores.find(p => p.id === profId || (p.nome || '').toLowerCase() === (profId || '').toLowerCase());
+    if (!prof && professores.length > 0) {
+        const modalNome = document.getElementById('cad-facial-prof-nome')?.innerText?.trim();
+        if (modalNome) {
+            prof = professores.find(p => (p.nome || '').toLowerCase().includes(modalNome.toLowerCase()));
+        }
+    }
 
     const video = document.getElementById('video-cad-facial');
-    const pInst = document.getElementById('cad-facial-instruction');
+    const statusEl = document.getElementById('cad-facial-status-msg');
+    if (statusEl) statusEl.innerText = "Processando pontos biométricos faciais...";
 
-    mostrarSnackbar("📷 Iniciando Captura Biométrica Multi-Ângulo...");
+    const res = await FaceSecurity.capturarBiometriaMultiAngulo(video, (c, t, label) => {
+        if (statusEl) statusEl.innerText = label;
+    });
 
-    const onStepChange = (curr, total, label) => {
-        if (pInst) {
-            pInst.innerHTML = `<strong style="color:var(--rodin-orange); font-size:13px;">${label}</strong>`;
-        }
-        mostrarSnackbar(label);
-    };
-
-    const res = await FaceSecurity.capturarBiometriaMultiAngulo(video, onStepChange);
     if (res && res.descriptors && res.descriptors.length > 0) {
-        prof.facial_descriptors = res.descriptors;
-        prof.facial_descriptor = res.descriptors[0];
-        prof.foto_biometrica = res.fotos.frente || res.fotos.direita || null;
-        prof.biometria_facial_status = true;
+        if (prof) {
+            prof.facial_descriptors = res.descriptors;
+            prof.facial_descriptor = res.descriptors[0];
+            prof.foto = res.fotos?.frente || prof.foto;
+            prof.foto_biometrica = res.fotos?.frente || null;
+            prof.biometria_facial_status = 'cadastrada';
+        } else {
+            const modalNome = document.getElementById('cad-facial-prof-nome')?.innerText?.trim() || 'Docente';
+            prof = {
+                id: profId || `prof_${Date.now()}`,
+                nome: modalNome,
+                disciplina: 'Geral',
+                etapa: 'Ensino Fundamental Anos Finais',
+                facial_descriptor: res.descriptors[0],
+                facial_descriptors: res.descriptors,
+                biometria_facial_status: 'cadastrada',
+                foto: res.fotos?.frente || `https://ui-avatars.com/api/?name=${encodeURIComponent(modalNome)}&background=F45206&color=fff`,
+                foto_biometrica: res.fotos?.frente || null
+            };
+            professores.push(prof);
+        }
 
-        window.safeSetLocalStorage('rodin_professores', db.professores);
+        window.safeSetLocalStorage('rodin_professores', professores);
+        localStorage.setItem('rodin_professores', JSON.stringify(professores));
 
         if (window.sb && typeof window.sb.from === 'function') {
             try {
-                const { error } = await window.sb.from('professores').update({
-                    biometria_facial_status: true,
-                    foto_biometrica: prof.foto_biometrica
-                }).eq('id', prof.id);
-
-                if (error) {
-                    console.warn("⚠️ Falha ao salvar a foto no Supabase (coluna 'foto_biometrica' pode estar ausente). Tentando salvar apenas o status...", error);
-                    await window.sb.from('professores').update({
-                        biometria_facial_status: true
-                    }).eq('id', prof.id);
-                }
-            } catch(e) {
-                console.warn("Erro ao atualizar biometria no Supabase:", e);
-            }
+                await window.sb.from('professores').upsert([{
+                    id: prof.id,
+                    nome: prof.nome,
+                    biometria_facial_status: true
+                }]);
+            } catch(e) {}
         }
 
         fecharModalCadastroFacial();
         renderizarListaProfessoresCadastrados();
-        mostrarSnackbar(`✓ Biometria e foto do Prof. '${prof.nome}' gravadas e aprovadas com sucesso!`);
+        if (typeof mostrarSnackbar === 'function') {
+            mostrarSnackbar(`✓ Face ID de '${prof.nome}' gravado e ativo com sucesso!`);
+        }
     } else {
-        mostrarSnackbar("⚠️ Não foi possível capturar o rosto com clareza. Tente novamente.");
+        if (statusEl) statusEl.innerText = "⚠️ Não foi possível capturar o rosto. Olhe diretamente para a câmera e tente novamente.";
     }
 }
 

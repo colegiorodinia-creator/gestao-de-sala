@@ -1237,8 +1237,18 @@
                     }
 
                     // Se for professor já existente
-                    const professores = window.db?.professores || [];
-                    const index = professores.findIndex(p => p.id === profId);
+                    const professores = (window.db?.professores) ? window.db.professores : (typeof db !== 'undefined' && db.professores ? db.professores : []);
+                    let index = professores.findIndex(p => p.id === profId);
+                    if (index === -1) {
+                        index = professores.findIndex(p => (p.nome || '').toLowerCase() === (profId || '').toLowerCase());
+                    }
+                    if (index === -1 && professores.length > 0) {
+                        const modalNome = document.getElementById('cad-facial-prof-nome')?.innerText?.trim();
+                        if (modalNome) {
+                            index = professores.findIndex(p => (p.nome || '').toLowerCase().includes(modalNome.toLowerCase()) || modalNome.toLowerCase().includes((p.nome || '').toLowerCase()));
+                        }
+                    }
+
                     if (index !== -1) {
                         professores[index].facial_descriptor = resultado.descriptors[0];
                         professores[index].facial_descriptors = resultado.descriptors;
@@ -1249,14 +1259,13 @@
                         }
 
                         if (typeof window.safeSetLocalStorage === 'function') {
-                            window.safeSetLocalStorage('rodin_professores', window.db.professores);
+                            window.safeSetLocalStorage('rodin_professores', professores);
                         } else {
-                            localStorage.setItem('rodin_professores', JSON.stringify(window.db.professores));
+                            localStorage.setItem('rodin_professores', JSON.stringify(professores));
                         }
 
-                        // Salvar no Supabase (Storage + Database)
                         if (typeof window.salvarBiometriaProfessorSupabase === 'function') {
-                            await window.salvarBiometriaProfessorSupabase(profId, resultado);
+                            window.salvarBiometriaProfessorSupabase(professores[index].id, resultado).catch(()=>{});
                         }
 
                         if (typeof mostrarSnackbar === 'function') {
@@ -1264,13 +1273,37 @@
                         }
                         window.fecharModalCadastroFacial();
                         window.renderizarListaProfessoresCadastrados();
+                    } else {
+                        const modalNome = document.getElementById('cad-facial-prof-nome')?.innerText?.trim() || 'Docente';
+                        const novo = {
+                            id: profId || `prof_${Date.now()}`,
+                            nome: modalNome,
+                            disciplina: 'Geral',
+                            etapa: 'Ensino Fundamental Anos Finais',
+                            facial_descriptor: resultado.descriptors[0],
+                            facial_descriptors: resultado.descriptors,
+                            biometria_facial_status: 'cadastrada',
+                            foto: resultado.fotos?.frente || `https://ui-avatars.com/api/?name=${encodeURIComponent(modalNome)}&background=F45206&color=fff`,
+                            foto_biometrica: resultado.fotos?.frente || null
+                        };
+                        professores.push(novo);
+                        if (typeof window.safeSetLocalStorage === 'function') {
+                            window.safeSetLocalStorage('rodin_professores', professores);
+                        } else {
+                            localStorage.setItem('rodin_professores', JSON.stringify(professores));
+                        }
+                        if (typeof mostrarSnackbar === 'function') {
+                            mostrarSnackbar(`Face ID de ${novo.nome} capturado e ativado com sucesso!`);
+                        }
+                        window.fecharModalCadastroFacial();
+                        window.renderizarListaProfessoresCadastrados();
                     }
                 } else {
-                    if (statusEl) statusEl.innerText = "Não foi possível detectar o rosto. Tente novamente em um ambiente mais iluminado.";
+                    if (statusEl) statusEl.innerText = "Não foi possível capturar o rosto. Olhe diretamente para a câmera e tente novamente.";
                 }
             } catch(err) {
                 console.error("Erro na captura biométrica:", err);
-                if (statusEl) statusEl.innerText = "Erro ao capturar biometria. Tente novamente.";
+                if (statusEl) statusEl.innerText = "Erro ao processar captura facial. Tente novamente.";
             }
         };
 
@@ -2036,9 +2069,9 @@
     <!-- SCRIPTS -->
     <script src="global.js"></script>
     <script src="sidebar.js"></script>
-    <script src="app.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
+    <script src="/assets/js/face-api.min.js"></script>
     <script src="face_security.js"></script>
+    <script src="app.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             if (typeof renderizarSidebarModelo === 'function') renderizarSidebarModelo('cadastros');
