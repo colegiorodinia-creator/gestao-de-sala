@@ -282,6 +282,17 @@ if (!window.db.mapa_slots) window.db.mapa_slots = [];
 if (!window.db.grade_slots) window.db.grade_slots = [];
 window.carregarBancoDeDadosLocal();
 
+if (!window.db.professores) window.db.professores = [];
+if (!window.db.professores.some(p => (p.nome || '').toLowerCase().includes('marcelo'))) {
+    window.db.professores.push({
+        id: 'prof_marcelo',
+        nome: 'Marcelo Canela',
+        disciplina: 'Robótica e IA',
+        etapa: 'Ensino Fundamental Anos Finais',
+        foto: 'https://ui-avatars.com/api/?name=Marcelo+Canela&background=F45206&color=fff'
+    });
+}
+
 // 2. SINCRONIZAÇÃO COMPLETA COM O SUPABASE (SEM GERAR DADOS FAKE)
 window.sincronizarBancoComSupabase = async function() {
     const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;

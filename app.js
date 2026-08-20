@@ -2223,47 +2223,45 @@ async function salvarEdicaoAluno(e) {
 }
 
 function renderizarListaProfessoresCadastrados() {
-    const lista = document.getElementById('lista-professores-cadastrados');
-    if (!lista) return;
+    const container = document.getElementById('lista-professores-cadastrados');
+    if (!container) return;
 
-    lista.innerHTML = db.professores.map(p => {
-        const ptds = db.ptd.filter(pt => pt.professor_id === p.id);
-        const turmasNomes = ptds.map(pt => {
-            const t = db.turmas.find(tu => tu.id === pt.turma_id);
-            return t ? t.nome : '';
-        }).filter(Boolean).join(', ') || '6º Ano A';
+    const professores = (window.db && window.db.professores) ? window.db.professores : (typeof db !== 'undefined' && db.professores ? db.professores : []);
 
-        const temFacial = (p.facial_descriptor && p.facial_descriptor.length > 0) || (p.facial_descriptors && p.facial_descriptors.length > 0);
-        const btnFacialText = temFacial ? '<i class="ph-bold ph-check" style="font-size:14px;"></i> Facial Cadastrada' : '<i class="ph-bold ph-camera" style="font-size:14px;"></i> Cadastrar Facial';
-        const btnFacialBg = temFacial ? 'background:#10B981; color:#FFF;' : 'background:#F45206; color:#FFF;';
-        
-        let discNome = p.disciplina || 'Matemática';
-        if (ptds.length > 0) {
-            const dFound = (db.disciplinas || []).find(d => (typeof d === 'string' ? d : d.id) === ptds[0].disciplina_id || (typeof d === 'object' && d.nome === ptds[0].disciplina_id));
-            if (dFound) discNome = typeof dFound === 'string' ? dFound : dFound.nome;
-        }
+    if (professores.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--rodin-cool-gray); font-size:13px;">Nenhum professor cadastrado.</div>`;
+        return;
+    }
 
-        const avatarProf = p.foto_biometrica ? 
-            `<img src="${p.foto_biometrica}" style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid var(--rodin-orange);">` : 
-            `<div style="width:38px; height:38px; border-radius:50%; background:var(--rodin-orange); color:#FFF; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px;">${escapeHTML(p.nome.charAt(0))}</div>`;
+    container.innerHTML = professores.map(p => {
+        const foto = p.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.nome)}&background=F45206&color=fff`;
+        const temFacial = (p.facial_descriptor && p.facial_descriptor.length > 0) || (p.facial_descriptors && p.facial_descriptors.length > 0) || (p.biometria_facial_status === 'cadastrada');
 
         return `
-            <div style="padding:12px 14px; background:#F8FAFC; border:1px solid var(--rodin-line); border-radius:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    ${avatarProf}
-                    <div>
-                        <strong style="font-size:13px; color:var(--rodin-graphite); display:block;">${escapeHTML(p.nome)}</strong>
-                        <span style="font-size:11px; color:var(--rodin-cool-gray); font-weight:600;">${escapeHTML(discNome)} • Turmas: ${escapeHTML(turmasNomes)} | ${escapeHTML(p.etapa || 'Ensino Fundamental Anos Finais')}</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#FFFFFF; padding:14px 16px; border-radius:14px; border:1.5px solid var(--rodin-line); gap:12px; box-shadow:0 2px 6px rgba(0,0,0,0.02);">
+                <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+                    <img src="${foto}" style="width:44px; height:44px; border-radius:50%; object-fit:cover; border:2px solid ${temFacial ? '#10B981' : '#CBD5E1'}; flex-shrink:0;">
+                    <div style="min-width:0;">
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <strong style="font-size:14px; color:var(--rodin-graphite);">${p.nome}</strong>
+                            ${temFacial ? 
+                                `<span style="display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:800; background:#ECFDF5; color:#059669; border:1px solid #A7F3D0; padding:2px 8px; border-radius:999px;"><i class="ph-bold ph-check-circle"></i> Face ID Ativo</span>` : 
+                                `<span style="display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:700; background:#F1F5F9; color:#64748B; border:1px solid #CBD5E1; padding:2px 8px; border-radius:999px;"><i class="ph-bold ph-user-focus"></i> Sem Face ID</span>`
+                            }
+                        </div>
+                        <div style="font-size:11.5px; color:var(--rodin-cool-gray); font-weight:600; margin-top:2px;">${p.disciplina || 'Geral'} • ${p.etapa || 'Todas as Etapas'}</div>
                     </div>
                 </div>
-                <div style="display:flex; align-items:center; gap:6px;">
-                    <button class="btn-primary-rodin" onclick="abrirModalEditarProfessor('${p.id}')" style="background:#475569; color:#FFF; font-size:11px; padding:6px 12px; border-radius:8px; gap:4px;">
-                        <i class="ph-bold ph-pencil-line" style="font-size:14px;"></i> Editar
+                <div style="display:flex; gap:8px; align-items:center; flex-shrink:0;">
+                    <button type="button" class="btn-primary-rodin" onclick="window.abrirModalCadastroFacial('${p.id}')" title="Capturar / Atualizar Biometria Facial" style="font-size:11.5px; padding:7px 14px; border-radius:10px; gap:6px; cursor:pointer; background:${temFacial ? '#059669' : 'var(--rodin-orange)'}; color:#FFF; font-weight:700;">
+                        <i class="ph-bold ph-camera"></i> ${temFacial ? 'Atualizar Face ID' : 'Escanear Rosto'}
                     </button>
-                    <button class="btn-primary-rodin" onclick="abrirModalCadastroFacial('${p.id}')" style="${btnFacialBg} font-size:11px; padding:6px 12px; border-radius:8px; gap:4px;">
-                        ${btnFacialText}
+                    <button type="button" class="btn-primary-rodin" onclick="window.abrirModalEditarProfessor('${p.id}')" title="Editar Perfil" style="background:#334155; color:#FFF; font-size:11.5px; padding:7px 12px; border-radius:10px; gap:4px; cursor:pointer;">
+                        <i class="ph-bold ph-pencil-line"></i> Editar
                     </button>
-                    <button class="btn-reset-pink" onclick="excluirProfessor('${p.id}')">Excluir</button>
+                    <button type="button" class="btn-reset-pink" onclick="window.excluirProfessor('${p.id}')" title="Excluir Professor" style="padding:7px 10px; font-size:11.5px; border-radius:10px; cursor:pointer;">
+                        <i class="ph-bold ph-trash"></i>
+                    </button>
                 </div>
             </div>
         `;
@@ -5002,18 +5000,33 @@ async function cadastrarProfessor(e) {
         return false;
     }
 
-    if (!db.professores) db.professores = [];
+    if (!window.db) window.db = { turmas: [], alunos: [], professores: [], disciplinas: [], usuarios_sistema: [] };
+    if (!window.db.professores) window.db.professores = [];
 
     const novoProf = {
         id: `prof_${Date.now()}`,
         nome: nome,
         etapa: etapa,
         disciplina: disciplina,
-        foto: `https://ui-avatars.com/api/?name=${encodeURIComponent(nome)}&background=4F46E5&color=fff`
+        foto: window._novoProfFotoTemp || `https://ui-avatars.com/api/?name=${encodeURIComponent(nome)}&background=F45206&color=fff`
     };
 
-    db.professores.push(novoProf);
-    window.safeSetLocalStorage('rodin_professores', db.professores);
+    if (window._novoProfBiometriaTemp) {
+        novoProf.facial_descriptor = window._novoProfBiometriaTemp;
+        novoProf.facial_descriptors = window._novoProfDescriptorsTemp || [window._novoProfBiometriaTemp];
+        novoProf.biometria_facial_status = 'cadastrada';
+        novoProf.foto_biometrica = window._novoProfFotoTemp || null;
+        window._novoProfBiometriaTemp = null;
+        window._novoProfDescriptorsTemp = null;
+        window._novoProfFotoTemp = null;
+    }
+
+    window.db.professores.push(novoProf);
+    if (typeof window.safeSetLocalStorage === 'function') {
+        window.safeSetLocalStorage('rodin_professores', window.db.professores);
+    } else {
+        localStorage.setItem('rodin_professores', JSON.stringify(window.db.professores));
+    }
 
     const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;
     if (sbClient && typeof sbClient.from === 'function') {
@@ -5029,6 +5042,9 @@ async function cadastrarProfessor(e) {
 
     const formEl = document.getElementById('form-cad-professor');
     if (formEl) formEl.reset();
+
+    const badgeEl = document.getElementById('badge-novo-prof-facial');
+    if (badgeEl) badgeEl.innerHTML = '';
 
     renderizarListaProfessoresCadastrados();
     if (typeof mostrarSnackbar === 'function') mostrarSnackbar(`Professor(a) '${nome}' cadastrado(a)!`);
@@ -5048,26 +5064,32 @@ function renderizarListaProfessoresCadastrados() {
     }
 
     container.innerHTML = professores.map(p => {
-        const foto = p.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.nome)}&background=4F46E5&color=fff`;
+        const foto = p.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.nome)}&background=F45206&color=fff`;
         const temFacial = (p.facial_descriptor && p.facial_descriptor.length > 0) || (p.facial_descriptors && p.facial_descriptors.length > 0) || (p.biometria_facial_status === 'cadastrada');
 
         return `
-            <div style="display:flex; justify-content:space-between; align-items:center; background:#F8FAFC; padding:12px 14px; border-radius:14px; border:1px solid var(--rodin-line); gap:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#FFFFFF; padding:14px 16px; border-radius:14px; border:1.5px solid var(--rodin-line); gap:12px; box-shadow:0 2px 6px rgba(0,0,0,0.02);">
                 <div style="display:flex; align-items:center; gap:12px; min-width:0;">
-                    <img src="${foto}" style="width:42px; height:42px; border-radius:50%; object-fit:cover; border:2px solid #4F46E5; flex-shrink:0;">
+                    <img src="${foto}" style="width:44px; height:44px; border-radius:50%; object-fit:cover; border:2px solid ${temFacial ? '#10B981' : '#CBD5E1'}; flex-shrink:0;">
                     <div style="min-width:0;">
-                        <strong style="font-size:13px; color:var(--rodin-graphite); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.nome}</strong>
-                        <div style="font-size:11px; color:var(--rodin-cool-gray); font-weight:600;">${p.disciplina || 'Geral'} • ${p.etapa || 'Todas as Etapas'}</div>
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <strong style="font-size:14px; color:var(--rodin-graphite);">${p.nome}</strong>
+                            ${temFacial ? 
+                                `<span style="display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:800; background:#ECFDF5; color:#059669; border:1px solid #A7F3D0; padding:2px 8px; border-radius:999px;"><i class="ph-bold ph-check-circle"></i> Face ID Ativo</span>` : 
+                                `<span style="display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:700; background:#F1F5F9; color:#64748B; border:1px solid #CBD5E1; padding:2px 8px; border-radius:999px;"><i class="ph-bold ph-user-focus"></i> Sem Face ID</span>`
+                            }
+                        </div>
+                        <div style="font-size:11.5px; color:var(--rodin-cool-gray); font-weight:600; margin-top:2px;">${p.disciplina || 'Geral'} • ${p.etapa || 'Todas as Etapas'}</div>
                     </div>
                 </div>
-                <div style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
-                    <button type="button" class="btn-primary-rodin" onclick="window.abrirModalCadastroFacial('${p.id}')" title="Scan / Cadastro Facial Face ID" style="font-size:11px; padding:6px 12px; border-radius:8px; gap:4px; cursor:pointer; background:${temFacial ? '#059669' : 'var(--rodin-orange)'}; color:#FFF;">
-                        <i class="ph-bold ph-user-focus"></i> ${temFacial ? 'Biometria Ativa' : 'Scan Facial'}
+                <div style="display:flex; gap:8px; align-items:center; flex-shrink:0;">
+                    <button type="button" class="btn-primary-rodin" onclick="window.abrirModalCadastroFacial('${p.id}')" title="Capturar / Atualizar Biometria Facial" style="font-size:11.5px; padding:7px 14px; border-radius:10px; gap:6px; cursor:pointer; background:${temFacial ? '#059669' : 'var(--rodin-orange)'}; color:#FFF; font-weight:700;">
+                        <i class="ph-bold ph-camera"></i> ${temFacial ? 'Atualizar Face ID' : 'Escanear Rosto'}
                     </button>
-                    <button type="button" class="btn-primary-rodin" onclick="window.abrirModalEditarProfessor('${p.id}')" title="Editar Professor" style="background:#475569; color:#FFF; font-size:11px; padding:6px 12px; border-radius:8px; gap:4px; cursor:pointer;">
+                    <button type="button" class="btn-primary-rodin" onclick="window.abrirModalEditarProfessor('${p.id}')" title="Editar Perfil" style="background:#334155; color:#FFF; font-size:11.5px; padding:7px 12px; border-radius:10px; gap:4px; cursor:pointer;">
                         <i class="ph-bold ph-pencil-line"></i> Editar
                     </button>
-                    <button type="button" class="btn-reset-pink" onclick="window.excluirProfessor('${p.id}')" title="Excluir Professor" style="padding:6px 10px; font-size:11px; cursor:pointer;">
+                    <button type="button" class="btn-reset-pink" onclick="window.excluirProfessor('${p.id}')" title="Excluir Professor" style="padding:7px 10px; font-size:11.5px; border-radius:10px; cursor:pointer;">
                         <i class="ph-bold ph-trash"></i>
                     </button>
                 </div>

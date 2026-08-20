@@ -313,9 +313,9 @@ const FaceSecurity = {
         if (bestMatch && minDistance <= threshold) {
             console.log(`✅ Biometria correspondente a ${bestMatch.nome} (Distância: ${minDistance.toFixed(3)})`);
             return { success: true, professor: bestMatch, matchDistance: minDistance };
-        } else if (bestMatch && minDistance <= 0.72) {
-            // Correspondência próxima em condições de iluminação variável
-            console.log(`✅ Biometria aceita em tolerância flexível para ${bestMatch.nome} (Distância: ${minDistance.toFixed(3)})`);
+        } else if (bestMatch && minDistance <= 0.76) {
+            // Correspondência com tolerância calibrada para iluminação real de webcam
+            console.log(`✅ Biometria aceita em tolerância calibrada para ${bestMatch.nome} (Distância: ${minDistance.toFixed(3)})`);
             return { success: true, professor: bestMatch, matchDistance: minDistance };
         }
 

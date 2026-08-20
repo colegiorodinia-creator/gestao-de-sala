@@ -25,16 +25,58 @@
     <script src="face_security.js"></script>
 
     <style>
+        .modal-container-apple-faceid {
+            max-width: 420px;
+            width: 92%;
+            background: #090C12;
+            color: #FFFFFF;
+            border-radius: 32px;
+            padding: 32px 24px;
+            border: 1.5px solid rgba(244, 82, 6, 0.45);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.95);
+            animation: appleModalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .apple-faceid-header-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 18px;
+            background: #131722;
+            border: 1.5px solid rgba(244, 82, 6, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--rodin-orange, #F45206);
+            font-size: 26px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 20px rgba(244, 82, 6, 0.25);
+            transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .apple-faceid-header-icon.unlocked {
+            border-color: #10B981;
+            color: #10B981;
+            background: #06231A;
+            transform: scale(1.12) rotate(-6deg);
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.5);
+        }
+
         .face-camera-container {
             width: 180px;
             height: 180px;
             position: relative;
             border-radius: 50%;
             overflow: hidden;
-            border: 3px solid var(--rodin-orange, #F45206);
+            border: 3.5px solid var(--rodin-orange, #F45206);
             margin: 16px auto;
             background: #000;
-            box-shadow: 0 0 25px rgba(244, 82, 6, 0.3);
+            box-shadow: 0 0 30px rgba(244, 82, 6, 0.35);
+            transition: all 0.3s ease;
         }
 
         .face-camera-container video {
@@ -46,7 +88,7 @@
 
         .face-camera-container.success {
             border-color: #10B981;
-            box-shadow: 0 0 30px rgba(16, 185, 129, 0.5);
+            box-shadow: 0 0 35px rgba(16, 185, 129, 0.6);
         }
 
         .face-scan-laser {
@@ -55,8 +97,8 @@
             left: 0;
             right: 0;
             height: 3px;
-            background: linear-gradient(90deg, transparent, #38BDF8, transparent);
-            box-shadow: 0 0 12px #38BDF8;
+            background: linear-gradient(90deg, transparent, var(--rodin-orange, #F45206), transparent);
+            box-shadow: 0 0 16px var(--rodin-orange, #F45206);
             display: none;
             z-index: 5;
         }
@@ -72,7 +114,7 @@
         }
     </style>
 </head>
-<body style="background:#090D16; margin:0; padding:0; overflow-x:hidden; font-family:'Inter', system-ui, -apple-system, sans-serif;">
+<body style="background:#05070B; margin:0; padding:0; overflow-x:hidden; font-family:'Inter', system-ui, -apple-system, sans-serif;">
 
     <!-- LAYOUT PRINCIPAL DO MAPA DE SALA (DARK MODE) -->
     <div class="app-layout" id="app-layout" style="display:none; width:100%; min-height:100vh;">
@@ -92,7 +134,7 @@
                             <div class="class-title" id="prof-turma-titulo">6º ANO A</div>
                             
                             <div style="display:flex; align-items:center; gap:10px;">
-                                <button type="button" onclick="abrirModalScanFacialLogin()" style="background:rgba(244,82,6,0.15); color:var(--rodin-orange, #F45206); border:1px solid rgba(244,82,6,0.4); padding:6px 14px; border-radius:999px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s ease;" title="Reconhecimento Facial Face ID">
+                                <button type="button" onclick="abrirModalScanFacialLogin()" style="background:#121722; color:var(--rodin-orange, #F45206); border:1px solid rgba(244,82,6,0.4); padding:6px 14px; border-radius:999px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s ease;" title="Reconhecimento Facial Face ID">
                                     <i class="ph-bold ph-user-focus"></i> Face ID
                                 </button>
 
@@ -101,14 +143,14 @@
                                     <span id="relogio-prof-dark">08:15</span>
                                 </div>
 
-                                <button type="button" onclick="executarLogoutProfessor()" style="background:#1E293B; color:#94A3B8; border:1px solid #334155; padding:6px 14px; border-radius:999px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s ease;" onmouseover="this.style.background='#EF4444'; this.style.color='#FFF';" onmouseout="this.style.background='#1E293B'; this.style.color='#94A3B8';">
+                                <button type="button" onclick="executarLogoutProfessor()" style="background:#121722; color:#94A3B8; border:1px solid #232D3F; padding:6px 14px; border-radius:999px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s ease;" onmouseover="this.style.background='#EF4444'; this.style.color='#FFF';" onmouseout="this.style.background='#121722'; this.style.color='#94A3B8';">
                                     <i class="ph-bold ph-sign-out"></i> Sair
                                 </button>
                             </div>
                         </div>
 
                         <!-- Banner Lousa / Professor -->
-                        <div style="background:#1E293B; color:#94A3B8; text-align:center; padding:12px; border-radius:14px; font-weight:800; font-size:12px; margin-bottom:20px; border:1px dashed #334155; display:flex; align-items:center; justify-content:center; gap:8px;">
+                        <div style="background:#121722; color:#94A3B8; text-align:center; padding:12px; border-radius:14px; font-weight:800; font-size:12px; margin-bottom:20px; border:1px dashed #232D3F; display:flex; align-items:center; justify-content:center; gap:8px;">
                             <i class="ph-bold ph-chalkboard-teacher" style="color:var(--rodin-orange, #F45206); font-size:18px;"></i> LOUSA / PROFESSOR (FRENTE DA SALA)
                         </div>
 
@@ -122,26 +164,28 @@
     </div>
 
     <!-- MODAL 5: DESBLOQUEIO BIOMÉTRICO (APPLE FACE ID EM TEMPO REAL) -->
-    <div id="modal-login-facial" class="modal-overlay" style="display:flex; position:fixed; inset:0; background:rgba(11, 15, 25, 0.95); z-index: 200020; align-items:center; justify-content:center; backdrop-filter:blur(16px);">
-        <div class="modal-container-apple-faceid" style="max-width: 420px; width:92%; background:#131C2E; color:#FFF; border-radius:32px; padding:32px 24px; border:1.5px solid rgba(244, 82, 6, 0.4); text-align:center; display:flex; flex-direction:column; align-items:center; position:relative; box-shadow:0 30px 80px rgba(0,0,0,0.8); animation: appleModalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+    <div id="modal-login-facial" class="modal-overlay" style="display:flex; position:fixed; inset:0; background:rgba(5, 7, 11, 0.97); z-index: 200020; align-items:center; justify-content:center; backdrop-filter:blur(20px);">
+        <div class="modal-container-apple-faceid">
             
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                <i class="ph-bold ph-shield-check" style="color:var(--rodin-orange, #F45206); font-size:24px;"></i>
-                <h2 style="font-size:20px; font-weight:800; color:#FFF; margin:0; letter-spacing:-0.2px;">Face ID do Professor</h2>
+            <!-- Ícone Estilo Apple Face ID que Destrava -->
+            <div class="apple-faceid-header-icon" id="apple-lock-wrapper">
+                <i class="ph-bold ph-lock-key" id="faceid-lock-icon"></i>
             </div>
             
-            <p style="font-size:12.5px; color:#94A3B8; margin:4px 0 16px 0; line-height:1.4;">
+            <h2 style="font-size:20px; font-weight:800; color:#FFFFFF; margin:0 0 6px 0; letter-spacing:-0.2px;">Face ID do Professor</h2>
+            
+            <p style="font-size:12.5px; color:#94A3B8; margin:0 0 16px 0; line-height:1.4;">
                 Aproxime seu rosto da câmera para desbloquear a visão de sala
             </p>
 
-            <!-- Câmera com Scanner e Linha Laser -->
+            <!-- Câmera com Scanner e Linha Laser Laranja -->
             <div class="face-camera-container scanning" id="faceid-camera-box">
                 <video id="video-login-facial" autoplay muted playsinline></video>
                 <div class="face-scan-laser"></div>
             </div>
 
-            <!-- Status do Reconhecimento -->
-            <p id="face-liveness-status" style="font-size:13px; font-weight:700; color:#38BDF8; margin:8px 0 18px 0; text-align:center; min-height:20px; line-height:1.4;">
+            <!-- Status do Reconhecimento (Branco / Laranja / Verde) -->
+            <p id="face-liveness-status" style="font-size:13px; font-weight:700; color:#FFFFFF; margin:8px 0 18px 0; text-align:center; min-height:20px; line-height:1.4;">
                 Iniciando câmera e analisando biometria...
             </p>
 
@@ -151,18 +195,18 @@
                     <i class="ph-bold ph-arrows-clockwise" style="font-size:18px;"></i> Tentar Scan Novamente
                 </button>
                 
-                <button type="button" onclick="abrirOverlaySenhaMonitoria()" style="background:#1E293B; color:#CBD5E1; border:1px solid #334155; border-radius:12px; padding:12px 20px; font-size:12.5px; font-weight:700; cursor:pointer; width:100%; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.2s ease;">
-                    <i class="ph-bold ph-key"></i> Desbloquear com Senha (Monitoria)
+                <button type="button" onclick="abrirOverlaySenhaMonitoria()" style="background:#131722; color:#FFFFFF; border:1px solid #232D3F; border-radius:12px; padding:12px 20px; font-size:12.5px; font-weight:700; cursor:pointer; width:100%; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.2s ease;">
+                    <i class="ph-bold ph-key" style="color:var(--rodin-orange, #F45206);"></i> Desbloquear com Senha (Monitoria)
                 </button>
             </div>
         </div>
     </div>
 
     <!-- OVERLAY DE LOGIN COM SENHA DA MONITORIA -->
-    <div id="sala-login-overlay" style="position:fixed; inset:0; background:#0B0F19; z-index:200010; display:none; align-items:center; justify-content:center; padding:20px;">
-        <div style="background:#131C2E; max-width:400px; width:100%; padding:36px 28px; border-radius:24px; border:1px solid #1E293B; text-align:center; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
-            <div style="width:56px; height:56px; background:rgba(244,82,6,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px auto; border:1px solid rgba(244,82,6,0.2);">
-                <i class="ph-bold ph-shield-check" style="font-size:28px; color:var(--rodin-orange, #F45206);"></i>
+    <div id="sala-login-overlay" style="position:fixed; inset:0; background:rgba(5, 7, 11, 0.98); z-index:200010; display:none; align-items:center; justify-content:center; padding:20px;">
+        <div style="background:#090C12; max-width:400px; width:100%; padding:36px 28px; border-radius:24px; border:1.5px solid rgba(244, 82, 6, 0.4); text-align:center; box-shadow:0 30px 80px rgba(0,0,0,0.95);">
+            <div style="width:56px; height:56px; background:#131722; border-radius:18px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px auto; border:1.5px solid rgba(244,82,6,0.35);">
+                <i class="ph-bold ph-lock-key" style="font-size:26px; color:var(--rodin-orange, #F45206);"></i>
             </div>
             <h2 style="font-size:20px; font-weight:800; color:#FFFFFF; margin:0 0 6px 0;">Acesso com Senha</h2>
             <p style="font-size:12.5px; color:#94A3B8; margin:0 0 20px 0; line-height:1.5;">Insira as credenciais autorizadas para desbloquear o mapa de sala.</p>
@@ -170,11 +214,11 @@
             <form id="sala-login-form" onsubmit="validarLoginMonitoria(event)" style="text-align:left; display:flex; flex-direction:column; gap:14px;">
                 <div>
                     <label style="display:block; font-size:10px; font-weight:700; color:#E2E8F0; text-transform:uppercase; margin-bottom:5px; letter-spacing:0.5px;">Usuário</label>
-                    <input type="text" id="sala-login-user" value="monitoria" required autocomplete="off" placeholder="Digite o usuário" style="width:100%; background:#1E293B; border:1px solid #334155; border-radius:12px; padding:11px 14px; color:#FFFFFF; font-size:13.5px; outline:none; box-sizing:border-box;">
+                    <input type="text" id="sala-login-user" value="monitoria" required autocomplete="off" placeholder="Digite o usuário" style="width:100%; background:#131722; border:1px solid #232D3F; border-radius:12px; padding:11px 14px; color:#FFFFFF; font-size:13.5px; outline:none; box-sizing:border-box;">
                 </div>
                 <div>
                     <label style="display:block; font-size:10px; font-weight:700; color:#E2E8F0; text-transform:uppercase; margin-bottom:5px; letter-spacing:0.5px;">Senha</label>
-                    <input type="password" id="sala-login-pass" required autocomplete="off" placeholder="Digite a senha" style="width:100%; background:#1E293B; border:1px solid #334155; border-radius:12px; padding:11px 14px; color:#FFFFFF; font-size:13.5px; outline:none; box-sizing:border-box;">
+                    <input type="password" id="sala-login-pass" required autocomplete="off" placeholder="Digite a senha" style="width:100%; background:#131722; border:1px solid #232D3F; border-radius:12px; padding:11px 14px; color:#FFFFFF; font-size:13.5px; outline:none; box-sizing:border-box;">
                 </div>
                 <div id="sala-login-error" style="color:#EF4444; font-size:11.5px; font-weight:600; text-align:center; display:none; margin-top:2px;">
                     ⚠️ Usuário ou senha incorretos!
@@ -474,14 +518,19 @@
             const box = document.getElementById('faceid-camera-box');
             const retryBtn = document.getElementById('btn-face-retry');
 
+            const lockIcon = document.getElementById('faceid-lock-icon');
+            const lockWrapper = document.getElementById('apple-lock-wrapper');
+            if (lockIcon) lockIcon.className = 'ph-bold ph-lock-key';
+            if (lockWrapper) lockWrapper.classList.remove('unlocked');
+
             if (box) {
                 box.classList.remove('success');
                 box.classList.add('scanning');
             }
             if (retryBtn) retryBtn.style.display = 'none';
             if (statusEl) {
-                statusEl.style.color = '#38BDF8';
-                statusEl.innerHTML = `<i class="ph-bold ph-spinner" style="animation:spin 1s linear infinite;"></i> Acessando câmera e analisando rosto...`;
+                statusEl.style.color = '#FFFFFF';
+                statusEl.innerHTML = `<i class="ph-bold ph-spinner" style="animation:spin 1s linear infinite; color:var(--rodin-orange, #F45206);"></i> Acessando câmera e analisando rosto...`;
             }
 
             try {
@@ -532,6 +581,9 @@
                         box.classList.remove('scanning');
                         box.classList.add('success');
                     }
+                    if (lockIcon) lockIcon.className = 'ph-bold ph-lock-key-open';
+                    if (lockWrapper) lockWrapper.classList.add('unlocked');
+
                     const nomeProf = resultado.professor?.nome || 'Professor';
                     if (statusEl) {
                         statusEl.style.color = '#10B981';
