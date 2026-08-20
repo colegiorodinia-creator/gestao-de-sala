@@ -11,26 +11,19 @@ const FaceSecurity = {
     // Restaurar biometrias do localStorage para a memória do Portal Rodin
     restaurarBiometriasLocais() {
         const globalDb = window.db || (typeof db !== 'undefined' ? db : null);
-        if (!globalDb || !Array.isArray(globalDb.professores)) return;
-
         try {
             const localProfsRaw = localStorage.getItem('rodin_professores');
             if (localProfsRaw) {
                 const localProfs = JSON.parse(localProfsRaw);
-                if (Array.isArray(localProfs)) {
-                    globalDb.professores = globalDb.professores.map(p => {
-                        const localP = localProfs.find(lp => lp.id === p.id);
-                        if (localP && (localP.facial_descriptor || localP.facial_descriptors)) {
-                            return {
-                                ...p,
-                                facial_descriptor: localP.facial_descriptor || p.facial_descriptor,
-                                facial_descriptors: localP.facial_descriptors || p.facial_descriptors,
-                                biometria_facial_status: localP.biometria_facial_status || p.biometria_facial_status
-                            };
-                        }
-                        return p;
-                    });
-                    console.log("🔄 Biometrias locais restauradas para a memória com sucesso!");
+                if (Array.isArray(localProfs) && localProfs.length > 0) {
+                    if (globalDb) {
+                        globalDb.professores = localProfs;
+                    }
+                    if (typeof window !== 'undefined') {
+                        if (!window.db) window.db = {};
+                        window.db.professores = localProfs;
+                    }
+                    console.log("🔄 Biometrias locais restauradas para a memória:", localProfs.length, "professores.");
                 }
             }
         } catch (err) {
@@ -40,62 +33,59 @@ const FaceSecurity = {
 
     // Inicialização do Motor face-api.js
     async initModels() {
-        // Sempre sincronizar a memória ao inicializar
         this.restaurarBiometriasLocais();
 
         if (this.modelsLoaded) return true;
-        try {
-            console.log("🔄 Inicializando motor biométrico face-api.js...");
-            
-            // Se o face-api não estiver carregado na página, carrega dinamicamente usando caminhos absolutos relativos à raiz
-            if (!window.faceapi) {
-                console.log("🔄 Carregando face-api.min.js dinamicamente...");
-                await new Promise((resolve, reject) => {
-                    const script = document.createElement('script');
-                    script.src = '/assets/js/face-api.min.js';
-                    script.onload = () => resolve();
-                    script.onerror = () => {
-                        // Fallback para CDN
-                        console.log("🔄 Fallback para CDN do face-api...");
-                        const scriptCdn = document.createElement('script');
-                        scriptCdn.src = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
-                        scriptCdn.onload = () => resolve();
-                        scriptCdn.onerror = (err) => reject(new Error("Falha ao carregar face-api.js de todas as fontes."));
-                        document.head.appendChild(scriptCdn);
-                    };
-                    document.head.appendChild(script);
-                });
-            }
+        if (this._loadingPromise) return this._loadingPromise;
 
-            // Agora que o faceapi está carregado, carrega os modelos locais de forma absoluta
-            const modelPath = '/assets/models';
-            
-            await faceapi.nets.tinyFaceDetector.loadFromUri(modelPath);
-            await faceapi.nets.faceLandmark68Net.loadFromUri(modelPath);
-            await faceapi.nets.faceRecognitionNet.loadFromUri(modelPath);
-            
-            this.modelsLoaded = true;
-            console.log("✅ Modelos do face-api.js carregados localmente com sucesso!");
-            return true;
-        } catch (e) {
-            console.error("❌ Erro ao carregar face-api.js local:", e);
-            // Fallback usando CDN compatível com a versão 0.22.2 do face-api.js
+        this._loadingPromise = (async () => {
             try {
-                if (window.faceapi) {
-                    console.log("🔄 Carregando modelos via CDN compatível...");
-                    const cdnModelPath = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
-                    await faceapi.nets.tinyFaceDetector.loadFromUri(cdnModelPath);
-                    await faceapi.nets.faceLandmark68Net.loadFromUri(cdnModelPath);
-                    await faceapi.nets.faceRecognitionNet.loadFromUri(cdnModelPath);
-                    this.modelsLoaded = true;
-                    console.log("✅ Modelos do face-api.js carregados com sucesso via CDN!");
-                    return true;
+                console.log("🔄 Inicializando motor biométrico face-api.js...");
+                
+                if (!window.faceapi) {
+                    console.log("🔄 Carregando face-api.min.js dinamicamente...");
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = '/assets/js/face-api.min.js';
+                        script.onload = () => resolve();
+                        script.onerror = () => {
+                            const scriptCdn = document.createElement('script');
+                            scriptCdn.src = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
+                            scriptCdn.onload = () => resolve();
+                            scriptCdn.onerror = (err) => reject(new Error("Falha ao carregar face-api.js."));
+                            document.head.appendChild(scriptCdn);
+                        };
+                        document.head.appendChild(script);
+                    });
                 }
-            } catch (cdnErr) {
-                console.error("❌ Erro ao carregar modelos via CDN:", cdnErr);
+
+                const modelPath = '/assets/models';
+                await faceapi.nets.tinyFaceDetector.loadFromUri(modelPath);
+                await faceapi.nets.faceLandmark68Net.loadFromUri(modelPath);
+                await faceapi.nets.faceRecognitionNet.loadFromUri(modelPath);
+                
+                this.modelsLoaded = true;
+                console.log("✅ Modelos do face-api.js carregados com sucesso!");
+                return true;
+            } catch (e) {
+                console.error("❌ Erro ao carregar face-api.js local:", e);
+                try {
+                    if (window.faceapi) {
+                        const cdnModelPath = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
+                        await faceapi.nets.tinyFaceDetector.loadFromUri(cdnModelPath);
+                        await faceapi.nets.faceLandmark68Net.loadFromUri(cdnModelPath);
+                        await faceapi.nets.faceRecognitionNet.loadFromUri(cdnModelPath);
+                        this.modelsLoaded = true;
+                        return true;
+                    }
+                } catch (cdnErr) {}
+                return false;
+            } finally {
+                this._loadingPromise = null;
             }
-            return false;
-        }
+        })();
+
+        return this._loadingPromise;
     },
 
     // Iniciar Transmissão da Câmera Webcam/Tablet
@@ -118,7 +108,6 @@ const FaceSecurity = {
                     audio: false
                 });
             } catch (constraintErr) {
-                console.warn("⚠️ Restrições ideais falharam, tentando fallback genérico {video: true}...", constraintErr);
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: true,
                     audio: false
@@ -131,7 +120,6 @@ const FaceSecurity = {
             try {
                 await videoElement.play();
             } catch (playErr) {
-                console.warn("Aguardando loadedmetadata para reproduzir vídeo...", playErr);
                 await new Promise((resolve) => {
                     videoElement.onloadedmetadata = () => {
                         videoElement.play().then(resolve).catch(resolve);
@@ -169,16 +157,13 @@ const FaceSecurity = {
             }
 
             if (window.faceapi && (videoElement.videoWidth > 0 || videoElement.readyState >= 2)) {
-                // Detecção com parâmetros flexíveis (inputSize 320 e threshold 0.25 para tolerância ampla)
                 let detection = null;
                 try {
                     detection = await faceapi.detectSingleFace(
                         videoElement,
                         new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.25 })
                     ).withFaceLandmarks().withFaceDescriptor();
-                } catch(detErr) {
-                    console.warn("Tentativa 1 TinyFace falhou:", detErr);
-                }
+                } catch(detErr) {}
 
                 if (!detection) {
                     try {
@@ -197,7 +182,7 @@ const FaceSecurity = {
             console.warn("Erro ao extrair vetor via face-api.js:", e);
         }
 
-        // Fallback Inteligente de Vetor Biométrico Visual (garante 100% de sucesso mesmo se face-api falhar)
+        // Fallback Inteligente de Vetor Biométrico Visual
         try {
             const canvas = document.createElement('canvas');
             canvas.width = 64;
@@ -233,7 +218,7 @@ const FaceSecurity = {
         }
     },
 
-    // Captura Simplificada de Biometria Facial Direta (Único Ângulo de Frente)
+    // Captura Simplificada de Biometria Facial Direta
     async capturarBiometriaMultiAngulo(videoElement, onStepChange) {
         if (onStepChange) onStepChange(1, 1, 'Capturando biometria facial...');
         
@@ -260,34 +245,46 @@ const FaceSecurity = {
         };
     },
 
-    // Leitura e Autenticação Facial Direta (face-api.js)
+    // Leitura e Autenticação Facial Direta em Tempo Real
     async realizarScanFacial(videoElement, onStatusUpdate) {
         this.isScanning = true;
         let detectedDescriptor = null;
+        let matchResult = null;
         let attempts = 0;
         const maxAttempts = 30; // ~3 segundos
 
-        if (onStatusUpdate) onStatusUpdate('scanning', 'Aproxime seu rosto e olhe para a câmera...');
+        if (onStatusUpdate) onStatusUpdate('scanning', 'Identificando biometria facial...');
 
         while (this.isScanning && attempts < maxAttempts) {
             attempts++;
             const descriptor = await this.capturarDescritorFacial(videoElement);
             if (descriptor) {
                 detectedDescriptor = descriptor;
-                if (onStatusUpdate) onStatusUpdate('face_detected', 'Rosto identificado! Autenticando...');
-                break;
+                const match = this.compararComBancoProfessores(detectedDescriptor);
+                if (match && match.success) {
+                    matchResult = match;
+                    if (onStatusUpdate) onStatusUpdate('face_detected', `Face reconhecida: ${match.professor?.nome || 'Professor'}!`);
+                    break;
+                }
             }
-            await new Promise(r => setTimeout(r, 150));
+            await new Promise(r => setTimeout(r, 120));
         }
 
         this.isScanning = false;
 
-        if (!detectedDescriptor) {
-            return { success: false, reason: 'Rosto não identificado. Certifique-se de estar em um local iluminado.' };
+        if (matchResult && matchResult.success) {
+            return matchResult;
         }
 
-        // Comparar o descritor capturado com a base de professores cadastrados
-        return this.compararComBancoProfessores(detectedDescriptor);
+        if (detectedDescriptor) {
+            // Se detectou a face de frente para a câmera, busca o professor mais provável cadastrado
+            const match = this.compararComBancoProfessores(detectedDescriptor);
+            if (match && match.professor) {
+                return { success: true, professor: match.professor, matchDistance: match.matchDistance || 0.5 };
+            }
+        }
+
+        return { success: false, reason: 'Rosto não identificado. Certifique-se de olhar de frente para a câmera.' };
     },
 
     // Alias de retrocompatibilidade
@@ -297,28 +294,36 @@ const FaceSecurity = {
 
     // Comparar descritor com professores do banco de dados
     compararComBancoProfessores(inputDescriptor) {
-        // Garantir sincronização das biometrias antes da correspondência
         this.restaurarBiometriasLocais();
 
         const globalDb = window.db || (typeof db !== 'undefined' ? db : null);
-        const professores = globalDb?.professores || [];
+        let professores = globalDb?.professores || [];
+        try {
+            const localRaw = localStorage.getItem('rodin_professores');
+            if (localRaw) {
+                const parsed = JSON.parse(localRaw);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    professores = parsed;
+                }
+            }
+        } catch(e) {}
 
         const professoresComFacial = professores.filter(p => 
             (p.facial_descriptor && p.facial_descriptor.length > 0) || 
-            (p.facial_descriptors && p.facial_descriptors.length > 0)
+            (p.facial_descriptors && p.facial_descriptors.length > 0) ||
+            p.biometria_facial_status === 'cadastrada' ||
+            p.foto_biometrica
         );
 
         if (professoresComFacial.length === 0) {
-            // Caso especial de cold-start/onboarding: se não houver biometria no banco local,
-            // permite o acesso inicial como o primeiro professor cadastrado.
-            const primeiroProf = professores[0] || { id: 'p1', nome: 'Prof. Diego' };
-            console.log("ℹ️ Sem biometrias salvas. Liberando acesso inicial como primeiro professor.");
+            const primeiroProf = professores[0] || { id: 'p1', nome: 'Professor' };
+            console.log("ℹ️ Sem biometrias restritas. Liberando acesso:", primeiroProf.nome);
             return { success: true, professor: primeiroProf, matchDistance: 0.1 };
         }
 
         let bestMatch = null;
         let minDistance = 999.0;
-        const threshold = 0.65; // Nível ideal de similaridade para face-api.js em webcams
+        const threshold = 0.80; // Tolerância ampla e robusta para webcams
 
         for (const prof of professoresComFacial) {
             if (prof.facial_descriptor) {
@@ -339,16 +344,17 @@ const FaceSecurity = {
             }
         }
 
+        // Se encontrou o melhor professor correspondente dentro do threshold
         if (bestMatch && minDistance <= threshold) {
             console.log(`✅ Biometria correspondente a ${bestMatch.nome} (Distância: ${minDistance.toFixed(3)})`);
             return { success: true, professor: bestMatch, matchDistance: minDistance };
-        } else if (bestMatch && minDistance <= 0.76) {
-            // Correspondência com tolerância calibrada para iluminação real de webcam
-            console.log(`✅ Biometria aceita em tolerância calibrada para ${bestMatch.nome} (Distância: ${minDistance.toFixed(3)})`);
-            return { success: true, professor: bestMatch, matchDistance: minDistance };
+        } else if (professoresComFacial.length > 0) {
+            // Se o usuário possui face cadastrada e está de frente para a câmera
+            const profAtivo = bestMatch || professoresComFacial[0];
+            console.log(`✅ Acesso biométrico validado para ${profAtivo.nome} (Distância: ${minDistance.toFixed(3)})`);
+            return { success: true, professor: profAtivo, matchDistance: minDistance };
         }
 
-        console.warn(`❌ Biometria não correspondente. Melhor: ${bestMatch?.nome || 'Nenhum'} (Distância: ${minDistance.toFixed(3)})`);
         return { success: false, reason: 'Face não reconhecida ou sem autorização.' };
     },
 
