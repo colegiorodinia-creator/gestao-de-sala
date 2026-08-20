@@ -1134,6 +1134,10 @@
                             <button type="button" class="btn-primary-rodin" onclick="window.abrirModalCadastroFacial('${p.id}')" title="Capturar / Atualizar Biometria Facial" style="font-size:11.5px; padding:7px 14px; border-radius:10px; gap:6px; cursor:pointer; background:${temFacial ? '#059669' : 'var(--rodin-orange)'}; color:#FFF; font-weight:700;">
                                 <i class="ph-bold ph-camera"></i> ${temFacial ? 'Atualizar Face ID' : 'Escanear Rosto'}
                             </button>
+                            ${temFacial ? `
+                            <button type="button" class="btn-reset-pink" onclick="window.removerFaceIdProfessor('${p.id}')" title="Remover Face ID" style="padding:7px 10px; font-size:11.5px; border-radius:10px; cursor:pointer; background:#FEF2F2; color:#DC2626; border:1px solid #FECACA;">
+                                <i class="ph-bold ph-shield-slash"></i> Remover Face ID
+                            </button>` : ''}
                             <button type="button" class="btn-primary-rodin" onclick="window.abrirModalEditarProfessor('${p.id}')" title="Editar Perfil" style="background:#334155; color:#FFF; font-size:11.5px; padding:7px 12px; border-radius:10px; gap:4px; cursor:pointer;">
                                 <i class="ph-bold ph-pencil-line"></i> Editar
                             </button>
@@ -1144,6 +1148,39 @@
                     </div>
                 `;
             }).join('');
+        };
+
+        window.removerFaceIdProfessor = function(profId) {
+            const professores = window.db?.professores || [];
+            const prof = professores.find(p => p.id === profId);
+            if (!prof) return;
+            if (!confirm(`Deseja realmente remover o Face ID de ${prof.nome}?`)) return;
+
+            delete prof.facial_descriptor;
+            delete prof.facial_descriptors;
+            delete prof.foto_biometrica;
+            prof.biometria_facial_status = false;
+
+            if (typeof window.safeSetLocalStorage === 'function') {
+                window.safeSetLocalStorage('rodin_professores', window.db.professores);
+            } else {
+                localStorage.setItem('rodin_professores', JSON.stringify(window.db.professores));
+            }
+
+            const sbClient = window.obterClienteSupabase ? window.obterClienteSupabase() : window.sb;
+            if (sbClient && typeof sbClient.from === 'function') {
+                try {
+                    sbClient.from('professores').update({
+                        biometria_facial_status: false,
+                        foto_biometrica: null
+                    }).eq('id', profId).then(()=>{}).catch(()=>{});
+                } catch(e){}
+            }
+
+            window.renderizarListaProfessoresCadastrados();
+            if (typeof mostrarSnackbar === 'function') {
+                mostrarSnackbar(`Face ID de '${prof.nome}' foi removido com sucesso!`);
+            }
         };
 
         window.abrirModalCadastroFacial = async function(profId) {

@@ -234,7 +234,6 @@ const FaceSecurity = {
     // Leitura e Autenticação Facial Direta em Tempo Real
     async realizarScanFacial(videoElement, onStatusUpdate) {
         this.isScanning = true;
-        let detectedDescriptor = null;
         let matchResult = null;
         let attempts = 0;
         const maxAttempts = 20; // ~2 segundos
@@ -245,8 +244,7 @@ const FaceSecurity = {
             attempts++;
             const descriptor = await this.capturarDescritorFacial(videoElement);
             if (descriptor) {
-                detectedDescriptor = descriptor;
-                const match = this.compararComBancoProfessores(detectedDescriptor);
+                const match = this.compararComBancoProfessores(descriptor);
                 if (match && match.success) {
                     matchResult = match;
                     if (onStatusUpdate) onStatusUpdate('face_detected', `Face reconhecida: ${match.professor?.nome || 'Professor'}!`);
@@ -262,22 +260,33 @@ const FaceSecurity = {
             return matchResult;
         }
 
-        if (detectedDescriptor) {
-            const match = this.compararComBancoProfessores(detectedDescriptor);
-            if (match && match.professor) {
-                return { success: true, professor: match.professor, matchDistance: match.matchDistance || 0.5 };
-            }
-        }
-
-        // Se a câmera do professor está ativa e transmitindo
-        if (videoElement && (videoElement.videoWidth > 0 || videoElement.readyState >= 2)) {
+        // Se chegou ao fim do scan sem correspondência válida
+        const globalDb = window.db || (typeof db !== 'undefined' ? db : null);
+        let professores = globalDb?.professores || [];
+        try {
             const localRaw = localStorage.getItem('rodin_professores');
-            const professores = localRaw ? JSON.parse(localRaw) : (window.db?.professores || []);
-            const prof = professores.find(p => p.biometria_facial_status === 'cadastrada' || p.foto_biometrica) || professores[0] || { nome: 'Professor' };
-            return { success: true, professor: prof, matchDistance: 0.1 };
+            if (localRaw) {
+                const parsed = JSON.parse(localRaw);
+                if (Array.isArray(parsed) && parsed.length > 0) professores = parsed;
+            }
+        } catch(e) {}
+
+        const temBiometria = professores.some(p => 
+            (p.facial_descriptor && Array.isArray(p.facial_descriptor) && p.facial_descriptor.length > 0) || 
+            (p.facial_descriptors && Array.isArray(p.facial_descriptors) && p.facial_descriptors.length > 0)
+        );
+
+        if (!temBiometria) {
+            return { 
+                success: false, 
+                reason: 'Nenhum Face ID cadastrado. Cadastre sua biometria em Cadastros ou entre com a senha de monitoria.' 
+            };
         }
 
-        return { success: false, reason: 'Rosto não identificado. Certifique-se de olhar de frente para a câmera.' };
+        return { 
+            success: false, 
+            reason: 'Face não reconhecida. Certifique-se de que seu Face ID está cadastrado ou entre com a senha de monitoria.' 
+        };
     },
 
     // Alias de retrocompatibilidade
@@ -285,7 +294,7 @@ const FaceSecurity = {
         return this.realizarScanFacial(videoElement, onStatusUpdate);
     },
 
-    // Comparar descritor com professores do banco de dados
+    // Comparar descritor com professores do banco de dados (Validação Estrita)
     compararComBancoProfessores(inputDescriptor) {
         this.restaurarBiometriasLocais();
 
@@ -301,53 +310,52 @@ const FaceSecurity = {
             }
         } catch(e) {}
 
+        // Filtra APENAS professores que de fato possuem vetores biométricos registrados
         const professoresComFacial = professores.filter(p => 
-            (p.facial_descriptor && p.facial_descriptor.length > 0) || 
-            (p.facial_descriptors && p.facial_descriptors.length > 0) ||
-            p.biometria_facial_status === 'cadastrada' ||
-            p.foto_biometrica
+            (p.facial_descriptor && Array.isArray(p.facial_descriptor) && p.facial_descriptor.length > 0) || 
+            (p.facial_descriptors && Array.isArray(p.facial_descriptors) && p.facial_descriptors.length > 0)
         );
 
+        // Se NÃO há biometrias cadastradas, NUNCA autoriza entrada biométrica
         if (professoresComFacial.length === 0) {
-            const primeiroProf = professores[0] || { id: 'p1', nome: 'Professor' };
-            console.log("ℹ️ Sem biometrias restritas. Liberando acesso:", primeiroProf.nome);
-            return { success: true, professor: primeiroProf, matchDistance: 0.1 };
+            return { 
+                success: false, 
+                reason: 'Nenhum Face ID cadastrado no sistema. Cadastre sua face na aba de Cadastros de Professores.' 
+            };
         }
 
         let bestMatch = null;
         let minDistance = 999.0;
-        const threshold = 0.80; // Tolerância ampla e robusta para webcams
+        const threshold = 0.65; // Tolerância estrita e precisa
 
         for (const prof of professoresComFacial) {
-            if (prof.facial_descriptor) {
+            if (prof.facial_descriptor && Array.isArray(prof.facial_descriptor)) {
                 const dist = this.calcularDistanciaEuclidiana(inputDescriptor, prof.facial_descriptor);
                 if (dist < minDistance) {
                     minDistance = dist;
                     bestMatch = prof;
                 }
             }
-            if (prof.facial_descriptors && prof.facial_descriptors.length > 0) {
+            if (prof.facial_descriptors && Array.isArray(prof.facial_descriptors)) {
                 for (const desc of prof.facial_descriptors) {
-                    const dist = this.calcularDistanciaEuclidiana(inputDescriptor, desc);
-                    if (dist < minDistance) {
-                        minDistance = dist;
-                        bestMatch = prof;
+                    if (Array.isArray(desc)) {
+                        const dist = this.calcularDistanciaEuclidiana(inputDescriptor, desc);
+                        if (dist < minDistance) {
+                            minDistance = dist;
+                            bestMatch = prof;
+                        }
                     }
                 }
             }
         }
 
-        // Se encontrou o melhor professor correspondente dentro do threshold
+        // Se encontrou correspondência com distância estritamente válida
         if (bestMatch && minDistance <= threshold) {
-            console.log(`✅ Biometria correspondente a ${bestMatch.nome} (Distância: ${minDistance.toFixed(3)})`);
+            console.log(`✅ Biometria validada para ${bestMatch.nome} (Distância: ${minDistance.toFixed(3)})`);
             return { success: true, professor: bestMatch, matchDistance: minDistance };
-        } else if (professoresComFacial.length > 0) {
-            // Se o usuário possui face cadastrada e está de frente para a câmera
-            const profAtivo = bestMatch || professoresComFacial[0];
-            console.log(`✅ Acesso biométrico validado para ${profAtivo.nome} (Distância: ${minDistance.toFixed(3)})`);
-            return { success: true, professor: profAtivo, matchDistance: minDistance };
         }
 
+        console.warn(`❌ Biometria recusada (Melhor distância: ${minDistance.toFixed(3)}, Limiar: ${threshold})`);
         return { success: false, reason: 'Face não reconhecida ou sem autorização.' };
     },
 
