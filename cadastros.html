@@ -992,6 +992,7 @@
 
         window.abrirModalScanNovoProfessor = async function() {
             window._profCadastroFacialId = 'NOVO_PROFESSOR';
+            window.profIdCadastroFacial = 'NOVO_PROFESSOR';
             const modal = document.getElementById('modal-cadastro-facial');
             const nomeEl = document.getElementById('cad-facial-prof-nome');
             const nomeInput = document.getElementById('cad-prof-nome')?.value.trim() || 'Novo Professor';
@@ -1000,16 +1001,35 @@
 
             const videoEl = document.getElementById('video-cad-facial');
             const statusEl = document.getElementById('cad-facial-status-msg');
-            if (statusEl) statusEl.innerText = "Iniciando câmera e motor biométrico...";
+            if (statusEl) statusEl.innerHTML = `<i class="ph-bold ph-spinner" style="animation:spin 1s linear infinite; color:var(--rodin-orange);"></i> Acessando câmera...`;
+
+            // Ativação imediata da câmera
+            let ok = false;
+            if (window.FaceSecurity) {
+                ok = await window.FaceSecurity.startCamera(videoEl);
+            }
+            if (!ok && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                try {
+                    videoEl.muted = true;
+                    videoEl.setAttribute('autoplay', '');
+                    videoEl.setAttribute('playsinline', '');
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+                    videoEl.srcObject = stream;
+                    await videoEl.play();
+                    ok = true;
+                } catch(e){
+                    console.warn("Fallback getUserMedia:", e);
+                }
+            }
+
+            if (ok) {
+                if (statusEl) statusEl.innerText = "Posicione o rosto no centro da moldura e clique em 'Capturar Biometria'.";
+            } else {
+                if (statusEl) statusEl.innerHTML = `<span style="color:#EF4444; font-weight:700;">⚠️ Câmera indisponível. Verifique as permissões de vídeo do seu navegador.</span>`;
+            }
 
             if (window.FaceSecurity) {
-                await window.FaceSecurity.initModels();
-                const ok = await window.FaceSecurity.startCamera(videoEl);
-                if (ok) {
-                    if (statusEl) statusEl.innerText = "Posicione o rosto no centro da moldura e clique em 'Capturar Biometria'.";
-                } else {
-                    if (statusEl) statusEl.innerText = "Câmera indisponível. Verifique as permissões do navegador.";
-                }
+                window.FaceSecurity.initModels().catch(()=>{});
             }
         };
 
@@ -1031,19 +1051,23 @@
             if (!window.db) window.db = { turmas: [], alunos: [], professores: [], disciplinas: [], usuarios_sistema: [] };
             if (!window.db.professores) window.db.professores = [];
 
-            const temBiometria = window._novoProfBiometriaTemp ? true : false;
-            const fotoFinal = window._novoProfFotoTemp || `https://ui-avatars.com/api/?name=${encodeURIComponent(nome)}&background=4F46E5&color=fff`;
-
             const novoProf = {
                 id: `prof_${Date.now()}`,
                 nome: nome,
                 etapa: etapa,
                 disciplina: disciplina,
-                foto: fotoFinal,
-                facial_descriptor: window._novoProfBiometriaTemp || null,
-                facial_descriptors: window._novoProfDescriptorsTemp || (window._novoProfBiometriaTemp ? [window._novoProfBiometriaTemp] : null),
-                biometria_facial_status: temBiometria ? 'cadastrada' : 'pendente'
+                foto: window._novoProfFotoTemp || `https://ui-avatars.com/api/?name=${encodeURIComponent(nome)}&background=F45206&color=fff`
             };
+
+            if (window._novoProfBiometriaTemp) {
+                novoProf.facial_descriptor = window._novoProfBiometriaTemp;
+                novoProf.facial_descriptors = window._novoProfDescriptorsTemp || [window._novoProfBiometriaTemp];
+                novoProf.biometria_facial_status = 'cadastrada';
+                novoProf.foto_biometrica = window._novoProfFotoTemp || null;
+                window._novoProfBiometriaTemp = null;
+                window._novoProfDescriptorsTemp = null;
+                window._novoProfFotoTemp = null;
+            }
 
             window.db.professores.push(novoProf);
             if (typeof window.safeSetLocalStorage === 'function') {
@@ -1059,32 +1083,16 @@
                         id: novoProf.id,
                         nome: novoProf.nome,
                         etapa: novoProf.etapa,
-                        biometria_facial_status: !!novoProf.facial_descriptor
+                        disciplina: novoProf.disciplina
                     }]);
-                } catch(err){
-                    console.warn("Aviso ao inserir professor no Supabase:", err);
-                }
+                } catch(err){}
             }
-
-            // Se escaneou a face no cadastro, salva os descritores no Supabase Storage
-            if (novoProf.facial_descriptor && typeof window.salvarBiometriaProfessorSupabase === 'function') {
-                try {
-                    await window.salvarBiometriaProfessorSupabase(novoProf.id, {
-                        descriptors: novoProf.facial_descriptors || [novoProf.facial_descriptor],
-                        fotos: { frente: novoProf.foto }
-                    });
-                } catch(e){}
-            }
-
-            // Limpar temporários
-            window._novoProfBiometriaTemp = null;
-            window._novoProfDescriptorsTemp = null;
-            window._novoProfFotoTemp = null;
-            const badgeEl = document.getElementById('badge-novo-prof-facial');
-            if (badgeEl) badgeEl.innerHTML = `<span style="font-size:11px; color:var(--rodin-cool-gray);">Nenhuma face escaneada ainda (opcional)</span>`;
 
             const formEl = document.getElementById('form-cad-professor');
             if (formEl) formEl.reset();
+
+            const badgeEl = document.getElementById('badge-novo-prof-facial');
+            if (badgeEl) badgeEl.innerHTML = '';
 
             window.renderizarListaProfessoresCadastrados();
             if (typeof mostrarSnackbar === 'function') mostrarSnackbar(`Professor(a) '${nome}' cadastrado(a) com sucesso!`);
@@ -1141,26 +1149,46 @@
         window.abrirModalCadastroFacial = async function(profId) {
             const professores = window.db?.professores || [];
             const prof = professores.find(p => p.id === profId);
-            if (!prof) return;
+            if (!prof && profId !== 'NOVO_PROFESSOR') return;
 
             window._profCadastroFacialId = profId;
+            window.profIdCadastroFacial = profId;
             const modal = document.getElementById('modal-cadastro-facial');
             const nomeEl = document.getElementById('cad-facial-prof-nome');
-            if (nomeEl) nomeEl.innerText = prof.nome;
+            if (nomeEl) nomeEl.innerText = prof ? prof.nome : 'Docente';
             if (modal) modal.style.display = 'flex';
 
             const videoEl = document.getElementById('video-cad-facial');
             const statusEl = document.getElementById('cad-facial-status-msg');
-            if (statusEl) statusEl.innerText = "Iniciando câmera e motor biométrico...";
+            if (statusEl) statusEl.innerHTML = `<i class="ph-bold ph-spinner" style="animation:spin 1s linear infinite; color:var(--rodin-orange);"></i> Acessando câmera...`;
+
+            // Ativação imediata da câmera
+            let ok = false;
+            if (window.FaceSecurity) {
+                ok = await window.FaceSecurity.startCamera(videoEl);
+            }
+            if (!ok && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                try {
+                    videoEl.muted = true;
+                    videoEl.setAttribute('autoplay', '');
+                    videoEl.setAttribute('playsinline', '');
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+                    videoEl.srcObject = stream;
+                    await videoEl.play();
+                    ok = true;
+                } catch(e){
+                    console.warn("Fallback getUserMedia:", e);
+                }
+            }
+
+            if (ok) {
+                if (statusEl) statusEl.innerText = "Posicione o rosto no centro da moldura e clique em 'Capturar Biometria'.";
+            } else {
+                if (statusEl) statusEl.innerHTML = `<span style="color:#EF4444; font-weight:700;">⚠️ Câmera indisponível. Verifique as permissões de vídeo do seu navegador.</span>`;
+            }
 
             if (window.FaceSecurity) {
-                await window.FaceSecurity.initModels();
-                const ok = await window.FaceSecurity.startCamera(videoEl);
-                if (ok) {
-                    if (statusEl) statusEl.innerText = "Posicione o rosto no centro da moldura e clique em 'Capturar Biometria'.";
-                } else {
-                    if (statusEl) statusEl.innerText = "Câmera indisponível. Verifique as permissões do navegador.";
-                }
+                window.FaceSecurity.initModels().catch(()=>{});
             }
         };
 
@@ -1785,29 +1813,6 @@
         </main>
     </div>
 
-    <!-- MODAL DE CADASTRO BIOMÉTRICO FACIAL -->
-    <div id="modal-cadastro-facial" class="modal-overlay" style="display:none; z-index: 10015;">
-        <div class="modal-container-popup" style="max-width: 520px; width:92%; background:#1E293B; color:#FFF; border-radius:24px; padding:24px; border:1px solid rgba(255,255,255,0.1);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                <h3 style="font-size:16px; font-weight:800; color:#FFF; margin:0; display:flex; align-items:center; gap:10px;">
-                    <i class="ph-bold ph-user-focus" style="color:var(--rodin-orange); font-size:24px;"></i> Cadastro de Biometria Facial
-                </h3>
-                <button onclick="fecharModalCadastroFacial()" class="btn-close-dark-round" title="Fechar">&times;</button>
-            </div>
-            <p id="cad-facial-instruction" style="font-size:12px; color:#94A3B8; margin-bottom:16px;">Posicione o rosto do professor no centro da câmera para registrar a biometria multi-ângulo.</p>
-            <div class="face-camera-wrapper">
-                <video id="video-cad-facial" autoplay muted playsinline></video>
-                <div class="face-oval-guide"></div>
-            </div>
-            <div style="display:flex; gap:12px; margin-top:20px;">
-                <button class="btn-dark-cancel" onclick="fecharModalCadastroFacial()" style="flex:1;">Cancelar</button>
-                <button class="btn-primary-rodin" onclick="processarCadastroFacialProfessor()" style="flex:1.5; justify-content:center; gap:8px;">
-                    <i class="ph-bold ph-camera" style="font-size:20px;"></i> Capturar Biometria
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- MODAL DE EDITAR USUÁRIO / ORIENTADOR -->
     <div id="modal-editar-usuario-sistema" class="modal-overlay" style="display:none; z-index: 10028;">
         <div class="modal-container-popup" style="max-width: 520px; width:92%; background:#FFF; border-radius:24px; padding:24px; border:1px solid var(--rodin-line);">
@@ -1863,34 +1868,34 @@
         </div>
     </div>
 
-    <!-- MODAL DE CADASTRO BIOMÉTRICO FACIAL DO PROFESSOR (FACE-API.JS) -->
-    <div id="modal-cadastro-facial" class="modal-overlay" style="display:none; z-index: 10020; align-items:center; justify-content:center;">
-        <div class="modal-container-popup" style="max-width: 520px; width:92%; background:#FFF; border-radius:24px; padding:28px; border:1px solid var(--rodin-line); box-shadow: 0 20px 40px rgba(0,0,0,0.15); text-align:center;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--rodin-line); padding-bottom:12px;">
-                <h3 style="font-size:16px; font-weight:800; color:var(--rodin-graphite); margin:0; display:flex; align-items:center; gap:8px;">
-                    <i class="ph-bold ph-user-focus" style="color:var(--rodin-orange); font-size:22px;"></i> Scan Facial - <span id="cad-facial-prof-nome">Professor</span>
+    <!-- MODAL DE CADASTRO BIOMÉTRICO FACIAL DO PROFESSOR (FACE ID RODIN) -->
+    <div id="modal-cadastro-facial" class="modal-overlay" style="display:none; z-index: 10020; align-items:center; justify-content:center; background:rgba(5, 7, 11, 0.95); backdrop-filter:blur(16px);">
+        <div class="modal-container-popup" style="max-width: 480px; width:92%; background:#090C12; color:#FFFFFF; border-radius:28px; padding:28px 24px; border:1.5px solid rgba(244, 82, 6, 0.45); box-shadow: 0 30px 80px rgba(0,0,0,0.95); text-align:center;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #1E2638; padding-bottom:12px;">
+                <h3 style="font-size:16px; font-weight:800; color:#FFFFFF; margin:0; display:flex; align-items:center; gap:8px;">
+                    <i class="ph-bold ph-user-focus" style="color:var(--rodin-orange, #F45206); font-size:22px;"></i> Scan Facial — <span id="cad-facial-prof-nome" style="color:var(--rodin-orange, #F45206);">Professor</span>
                 </h3>
-                <button onclick="window.fecharModalCadastroFacial()" class="btn-close-light-round" title="Fechar">&times;</button>
+                <button onclick="window.fecharModalCadastroFacial()" class="btn-close-dark-round" title="Fechar" style="background:#131722; color:#FFF; border:1px solid #232D3F; width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center;">&times;</button>
             </div>
             
-            <p style="font-size:12px; color:var(--rodin-cool-gray); margin-bottom:16px;">
-                Posicione o rosto do docente de frente para a câmera para registrar a biometria facial de alta segurança.
+            <p style="font-size:12.5px; color:#94A3B8; margin:0 0 16px 0; line-height:1.4;">
+                Posicione o rosto de frente para a câmera para registrar a biometria facial.
             </p>
 
-            <div style="position:relative; width:100%; max-width:360px; height:270px; margin:0 auto 16px; border-radius:20px; overflow:hidden; background:#0F172A; border:3px solid var(--rodin-orange); display:flex; align-items:center; justify-content:center;">
-                <video id="video-cad-facial" autoplay playsinline muted style="width:100%; height:100%; object-fit:cover; transform: scaleX(-1);"></video>
-                <!-- Moldura Oval Biométrica -->
-                <div style="position:absolute; width:180px; height:230px; border:2px dashed #38BDF8; border-radius:50%; pointer-events:none; box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);"></div>
+            <div style="position:relative; width:100%; max-width:340px; height:260px; margin:0 auto 16px; border-radius:20px; overflow:hidden; background:#000000; border:3px solid var(--rodin-orange, #F45206); box-shadow:0 0 25px rgba(244,82,6,0.3); display:flex; align-items:center; justify-content:center;">
+                <video id="video-cad-facial" autoplay playsinline muted style="width:100%; height:100%; object-fit:cover; transform: scaleX(-1); background:#000;"></video>
+                <!-- Moldura Oval Biométrica Laranja -->
+                <div style="position:absolute; width:170px; height:220px; border:2px dashed var(--rodin-orange, #F45206); border-radius:50%; pointer-events:none; box-shadow: 0 0 20px rgba(244, 82, 6, 0.4);"></div>
             </div>
 
-            <div id="cad-facial-status-msg" style="font-size:12px; font-weight:700; color:var(--rodin-orange); margin-bottom:18px; min-height:20px;">
+            <div id="cad-facial-status-msg" style="font-size:12.5px; font-weight:700; color:#FFFFFF; margin-bottom:18px; min-height:20px; line-height:1.4;">
                 Iniciando câmera...
             </div>
 
             <div style="display:flex; gap:12px;">
-                <button type="button" class="btn-light-cancel" onclick="window.fecharModalCadastroFacial()" style="flex:1;">Cancelar</button>
-                <button type="button" class="btn-primary-rodin" onclick="window.processarCadastroFacialProfessor()" style="flex:1.5; justify-content:center; background:var(--rodin-orange); font-weight:800;">
-                    <i class="ph-bold ph-camera"></i> Capturar Biometria
+                <button type="button" class="btn-light-cancel" onclick="window.fecharModalCadastroFacial()" style="flex:1; background:#131722; color:#CBD5E1; border:1px solid #232D3F; border-radius:12px; padding:12px; font-weight:700; cursor:pointer;">Cancelar</button>
+                <button type="button" class="btn-primary-rodin" onclick="window.processarCadastroFacialProfessor()" style="flex:1.5; justify-content:center; background:var(--rodin-orange, #F45206); color:#FFF; border:none; border-radius:12px; padding:12px; font-weight:800; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:8px; box-shadow:0 4px 15px rgba(244,82,6,0.4);">
+                    <i class="ph-bold ph-camera" style="font-size:18px;"></i> Capturar Biometria
                 </button>
             </div>
         </div>

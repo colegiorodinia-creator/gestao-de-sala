@@ -4281,17 +4281,45 @@ window.profIdCadastroFacial = null;
 // CENÁRIO 1: Cadastro de Biometria Facial do Professor
 async function abrirModalCadastroFacial(profId) {
     window.profIdCadastroFacial = profId;
+    window._profCadastroFacialId = profId;
     const modal = document.getElementById('modal-cadastro-facial');
+    const prof = (window.db?.professores || []).find(p => p.id === profId);
+    const nomeEl = document.getElementById('cad-facial-prof-nome');
+    if (nomeEl) nomeEl.innerText = prof ? prof.nome : 'Docente';
     if (modal) modal.style.display = 'flex';
-    
-    await FaceSecurity.initModels();
+
     const video = document.getElementById('video-cad-facial');
-    const pInst = document.getElementById('cad-facial-instruction');
-    if (pInst) pInst.innerHTML = "Posicione o rosto do professor no centro da câmera para registrar a biometria multi-ângulo.";
-    
-    const camOk = await FaceSecurity.startCamera(video);
-    if (!camOk && pInst) {
-        pInst.innerHTML = `<span style="color:#F87171; font-weight:800;">⚠️ Falha ao acessar a câmera. Verifique as permissões de acesso ou se a webcam está sendo usada por outro app.</span>`;
+    const statusEl = document.getElementById('cad-facial-status-msg');
+    if (statusEl) statusEl.innerHTML = `<i class="ph-bold ph-spinner" style="animation:spin 1s linear infinite; color:var(--rodin-orange);"></i> Acessando câmera...`;
+
+    // 1. Iniciar câmera instantaneamente
+    let camOk = false;
+    if (window.FaceSecurity) {
+        camOk = await FaceSecurity.startCamera(video);
+    }
+    if (!camOk && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+            video.muted = true;
+            video.setAttribute('autoplay', '');
+            video.setAttribute('playsinline', '');
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+            video.srcObject = stream;
+            await video.play();
+            camOk = true;
+        } catch(e) {
+            console.warn("Fallback getUserMedia:", e);
+        }
+    }
+
+    if (camOk) {
+        if (statusEl) statusEl.innerText = "Posicione o rosto de frente e clique em 'Capturar Biometria'.";
+    } else if (statusEl) {
+        statusEl.innerHTML = `<span style="color:#EF4444; font-weight:700;">⚠️ Falha ao acessar a câmera. Verifique as permissões do navegador.</span>`;
+    }
+
+    // 2. Carregar modelos em segundo plano
+    if (window.FaceSecurity) {
+        window.FaceSecurity.initModels().catch(()=>{});
     }
 }
 
@@ -4299,8 +4327,11 @@ function fecharModalCadastroFacial() {
     const modal = document.getElementById('modal-cadastro-facial');
     if (modal) modal.style.display = 'none';
     const video = document.getElementById('video-cad-facial');
-    FaceSecurity.stopCamera(video);
+    if (window.FaceSecurity) {
+        FaceSecurity.stopCamera(video);
+    }
     window.profIdCadastroFacial = null;
+    window._profCadastroFacialId = null;
 }
 
 async function processarCadastroFacialProfessor() {
