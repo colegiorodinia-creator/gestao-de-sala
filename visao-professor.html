@@ -112,6 +112,42 @@
             0% { top: 10px; }
             100% { top: 165px; }
         }
+
+        @keyframes pulseLock {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 30px rgba(244, 82, 6, 0.3); }
+            50% { transform: scale(1.06); box-shadow: 0 0 55px rgba(244, 82, 6, 0.65); }
+        }
+
+        @keyframes warningPulse {
+            0%, 100% { border-color: #EF4444; box-shadow: 0 0 10px rgba(239,68,68,0.4); }
+            50% { border-color: #F45206; box-shadow: 0 0 20px rgba(244,82,6,0.7); }
+        }
+
+        .lock-timer-badge {
+            background: #121722;
+            color: #FFFFFF;
+            border: 1.5px solid rgba(244, 82, 6, 0.35);
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .lock-timer-badge:hover {
+            border-color: var(--rodin-orange, #F45206);
+            background: #182030;
+        }
+
+        .lock-timer-badge.warning {
+            animation: warningPulse 1s infinite ease-in-out;
+            color: #EF4444 !important;
+        }
     </style>
 </head>
 <body style="background:#05070B; margin:0; padding:0; overflow-x:hidden; font-family:'Inter', system-ui, -apple-system, sans-serif;">
@@ -134,8 +170,14 @@
                             <div class="class-title" id="prof-turma-titulo">6º ANO A</div>
                             
                             <div style="display:flex; align-items:center; gap:10px;">
-                                <button type="button" onclick="abrirModalScanFacialLogin()" style="background:#121722; color:var(--rodin-orange, #F45206); border:1px solid rgba(244,82,6,0.4); padding:6px 14px; border-radius:999px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s ease;" title="Reconhecimento Facial Face ID">
-                                    <i class="ph-bold ph-user-focus"></i> Face ID
+                                <!-- Contador de 30s de Auto-Bloqueio -->
+                                <div class="lock-timer-badge" id="prof-lock-timer-badge" onclick="bloquearTabletManualmente()" title="Bloqueio automático em 30s de inatividade. Clique para bloquear agora.">
+                                    <i class="ph-bold ph-hourglass-high" style="color:var(--rodin-orange, #F45206); font-size:14px;" id="lock-timer-icon"></i>
+                                    <span id="lock-timer-countdown">30s</span>
+                                </div>
+
+                                <button type="button" onclick="bloquearTabletManualmente()" style="background:#121722; color:var(--rodin-orange, #F45206); border:1px solid rgba(244,82,6,0.4); padding:6px 14px; border-radius:999px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s ease;" title="Bloquear Tela">
+                                    <i class="ph-bold ph-lock-key"></i> Bloquear
                                 </button>
 
                                 <div class="clock-tag">
@@ -161,6 +203,28 @@
 
             </div>
         </main>
+    </div>
+
+    <!-- TELA DE DESCANSO / STANDBY (BLOQUEIO AUTOMÁTICO APÓS 30s) -->
+    <div id="tablet-standby-screen" onclick="despertarTabletEscanearFace()" style="display:none; position:fixed; inset:0; background:#05070B; z-index:200000; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; cursor:pointer; user-select:none;">
+        <div style="width:88px; height:88px; border-radius:28px; background:radial-gradient(circle, rgba(244,82,6,0.2) 0%, rgba(18,23,34,0.85) 100%); border:2px solid rgba(244,82,6,0.5); display:flex; align-items:center; justify-content:center; margin-bottom:24px; box-shadow:0 0 40px rgba(244,82,6,0.3); animation:pulseLock 2.4s infinite ease-in-out;">
+            <i class="ph-bold ph-lock-key" style="font-size:40px; color:var(--rodin-orange, #F45206);"></i>
+        </div>
+
+        <div style="font-size:36px; font-weight:900; color:#FFFFFF; margin-bottom:8px; letter-spacing:-0.5px;" id="standby-relogio">14:30</div>
+        
+        <div style="display:inline-flex; align-items:center; gap:8px; background:#121722; border:1px solid #232D3F; padding:6px 18px; border-radius:999px; font-size:12.5px; font-weight:800; color:var(--rodin-orange, #F45206); margin-bottom:24px;">
+            <i class="ph-bold ph-chalkboard"></i> <span id="standby-turma-info">6º ANO A • MATEMÁTICA</span>
+        </div>
+
+        <h2 style="font-size:22px; font-weight:800; color:#FFFFFF; margin:0 0 10px 0;">Tela Bloqueada por Inatividade</h2>
+        <p style="font-size:14px; color:#94A3B8; margin:0 0 28px 0; max-width:380px; line-height:1.5;">
+            Toque em <strong>qualquer lugar da tela</strong> para ativar o Face ID e desbloquear o mapa.
+        </p>
+
+        <div style="display:flex; align-items:center; gap:10px; background:rgba(244,82,6,0.14); border:1.5px solid var(--rodin-orange, #F45206); padding:14px 32px; border-radius:16px; color:#FFFFFF; font-size:14px; font-weight:800; box-shadow:0 8px 30px rgba(244,82,6,0.25);">
+            <i class="ph-bold ph-hand-tap" style="font-size:22px; color:var(--rodin-orange, #F45206);"></i> Toque para Desbloquear
+        </div>
     </div>
 
     <!-- MODAL 5: DESBLOQUEIO BIOMÉTRICO (APPLE FACE ID EM TEMPO REAL) -->
@@ -603,6 +667,7 @@
                         if (layout) layout.style.display = 'flex';
 
                         carregarMapaProfessor();
+                        iniciarContadorInatividade();
                         scanFacialEmProgresso = false;
                     }, 800);
 
@@ -658,6 +723,7 @@
                 if (layout) layout.style.display = 'flex';
                 
                 carregarMapaProfessor();
+                iniciarContadorInatividade();
             } else {
                 if (errorEl) {
                     errorEl.style.display = 'block';
@@ -668,6 +734,7 @@
 
         window.executarLogoutProfessor = function() {
             if (confirm("Deseja realmente sair da visualização da sala de aula?")) {
+                pararContadorInatividade();
                 sessionStorage.removeItem('rodin_faceid_unlocked');
                 sessionStorage.removeItem('rodin_sala_auth');
                 sessionStorage.removeItem('rodin_user_role');
@@ -680,6 +747,109 @@
                 abrirModalScanFacialLogin();
             }
         };
+
+        // ============================================================
+        // 2.1. CONTROLE DE INATIVIDADE (AUTO-LOCK 30s & FACE ID WAKEUP)
+        // ============================================================
+        const TEMPO_INATIVIDADE_PADRAO = 30;
+        let segundosRestantesInatividade = TEMPO_INATIVIDADE_PADRAO;
+        let timerInatividadeInterval = null;
+        let tabletEmStandby = false;
+
+        window.iniciarContadorInatividade = function() {
+            window.pararContadorInatividade();
+            tabletEmStandby = false;
+            segundosRestantesInatividade = TEMPO_INATIVIDADE_PADRAO;
+            window.atualizarDisplayContadorInatividade();
+
+            timerInatividadeInterval = setInterval(() => {
+                if (tabletEmStandby) return;
+                segundosRestantesInatividade--;
+                window.atualizarDisplayContadorInatividade();
+
+                if (segundosRestantesInatividade <= 0) {
+                    window.bloquearTabletPorInatividade();
+                }
+            }, 1000);
+        };
+
+        window.pararContadorInatividade = function() {
+            if (timerInatividadeInterval) {
+                clearInterval(timerInatividadeInterval);
+                timerInatividadeInterval = null;
+            }
+        };
+
+        window.resetarContadorInatividade = function() {
+            if (tabletEmStandby) return;
+            segundosRestantesInatividade = TEMPO_INATIVIDADE_PADRAO;
+            window.atualizarDisplayContadorInatividade();
+        };
+
+        window.atualizarDisplayContadorInatividade = function() {
+            const countdownEl = document.getElementById('lock-timer-countdown');
+            const badgeEl = document.getElementById('prof-lock-timer-badge');
+            const iconEl = document.getElementById('lock-timer-icon');
+
+            if (countdownEl) countdownEl.innerText = `${segundosRestantesInatividade}s`;
+
+            if (badgeEl) {
+                if (segundosRestantesInatividade <= 5) {
+                    badgeEl.classList.add('warning');
+                    if (iconEl) iconEl.className = 'ph-bold ph-hourglass-low';
+                } else {
+                    badgeEl.classList.remove('warning');
+                    if (iconEl) iconEl.className = 'ph-bold ph-hourglass-high';
+                }
+            }
+        };
+
+        window.bloquearTabletPorInatividade = function() {
+            window.pararContadorInatividade();
+            tabletEmStandby = true;
+
+            const modalFacial = document.getElementById('modal-login-facial');
+            const overlaySenha = document.getElementById('sala-login-overlay');
+            const layout = document.getElementById('app-layout');
+            const standby = document.getElementById('tablet-standby-screen');
+            const video = document.getElementById('video-login-facial');
+
+            if (window.FaceSecurity) FaceSecurity.stopCamera(video);
+            if (modalFacial) modalFacial.style.display = 'none';
+            if (overlaySenha) overlaySenha.style.display = 'none';
+            if (layout) layout.style.setProperty('display', 'none', 'important');
+
+            const turmaNome = document.getElementById('prof-turma-titulo')?.innerText || '6º ANO A';
+            const discNome = document.getElementById('prof-materia-titulo')?.innerText || 'AULA';
+            const standbyInfo = document.getElementById('standby-turma-info');
+            if (standbyInfo) standbyInfo.innerText = `${turmaNome} • ${discNome}`;
+
+            const agora = new Date();
+            const hh = String(agora.getHours()).padStart(2, '0');
+            const mm = String(agora.getMinutes()).padStart(2, '0');
+            const relStandby = document.getElementById('standby-relogio');
+            if (relStandby) relStandby.innerText = `${hh}:${mm}`;
+
+            if (standby) standby.style.display = 'flex';
+        };
+
+        window.bloquearTabletManualmente = function() {
+            window.bloquearTabletPorInatividade();
+        };
+
+        window.despertarTabletEscanearFace = function() {
+            const standby = document.getElementById('tablet-standby-screen');
+            if (standby) standby.style.display = 'none';
+
+            window.abrirModalScanFacialLogin();
+        };
+
+        // Ouvir interações na tela para reiniciar o contador de 30s
+        ['click', 'touchstart', 'touchend', 'pointerdown', 'mousemove', 'keydown', 'scroll'].forEach(evtName => {
+            window.addEventListener(evtName, () => {
+                window.resetarContadorInatividade();
+            }, { passive: true });
+        });
 
         // ============================================================
         // 3. CARREGAMENTO PRINCIPAL DO MAPA DO PROFESSOR
@@ -1042,6 +1212,7 @@
                 if (overlaySenha) overlaySenha.style.display = 'none';
                 if (layout) layout.style.display = 'flex';
                 carregarMapaProfessor();
+                iniciarContadorInatividade();
             } else {
                 if (layout) layout.style.display = 'none';
                 if (overlaySenha) overlaySenha.style.display = 'none';
